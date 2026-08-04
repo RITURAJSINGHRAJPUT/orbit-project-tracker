@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!--
+    The Orbit mark WITHOUT a background plate — transparent canvas.
+
+    Source for the maskable icons and the iOS splash images, both of which
+    composite it onto their own solid #0F172A field. icon.svg is the same
+    artwork with the rounded-rect plate baked in.
+
+    Keep visually in sync with components/brand/OrbitLogo.tsx.
+  -->
+  <defs>
+    <!-- Coords are in the 48px grid below, since that's the user space the
+         gradient is referenced from once the group transform applies. -->
+    <linearGradient id="orbitMarkGrad" x1="8" y1="40" x2="40" y2="8" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#4F46E5"/>
+      <stop offset="0.55" stop-color="#3B82F6"/>
+      <stop offset="1" stop-color="#22D3EE"/>
+    </linearGradient>
+  </defs>
+
+  <g transform="translate(256 256) scale(8.5) translate(-24 -24)" fill="none">
+    <g stroke="url(#orbitMarkGrad)" stroke-width="1.7" stroke-linecap="round">
+      <circle cx="24" cy="24" r="14"/>
+      <ellipse cx="24" cy="24" rx="7" ry="14" transform="rotate(-24 24 24)"/>
+      <ellipse cx="24" cy="24" rx="7" ry="14" transform="rotate(24 24 24)"/>
+      <ellipse cx="24" cy="24" rx="14" ry="7.5" transform="rotate(-32 24 24)"/>
+    </g>
+    <!-- Node fills match the surface these are always composited onto, so the
+         orbit lines read as passing behind them. -->
+    <g stroke="url(#orbitMarkGrad)" stroke-width="1.6" fill="#0F172A">
+      <circle cx="37.5" cy="11.5" r="2.9"/>
+      <circle cx="10.5" cy="36.5" r="2.9"/>
+      <circle cx="32.2" cy="19.4" r="2.2"/>
+      <circle cx="15.8" cy="28.6" r="2.2"/>
+      <circle cx="30.6" cy="28.9" r="2.2"/>
+    </g>
+  </g>
+</svg>

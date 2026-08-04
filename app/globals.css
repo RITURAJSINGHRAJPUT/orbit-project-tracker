@@ -1,26 +1,286 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:is(.dark *));
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+  /* ── Orbit Design Tokens ── */
+  --background: #0F172A;
+  --background-secondary: #0A1020;
+  --card: #1E293B;
+  --card-hover: #263348;
+  --border: rgba(148, 163, 184, 0.12);
+  --border-hover: rgba(148, 163, 184, 0.25);
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --primary: #3B82F6;
+  --primary-hover: #2563EB;
+  --primary-foreground: #ffffff;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  --success: #10B981;
+  --warning: #F59E0B;
+  --danger: #EF4444;
+  --info: #06B6D4;
+
+  --foreground: #F1F5F9;
+  --muted: #94A3B8;
+  --muted-bg: rgba(148, 163, 184, 0.08);
+
+  /* Priority */
+  --priority-low: #10B981;
+  --priority-medium: #F59E0B;
+  --priority-high: #F97316;
+  --priority-critical: #EF4444;
+
+  /* Radius */
+  --radius: 16px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+
+  /* Shadows */
+  --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.3);
+  --shadow-float: 0 8px 32px rgba(0, 0, 0, 0.4);
+
+  /* Bottom nav height */
+  --bottom-nav-h: 72px;
+
+  /* Light mode overrides */
+  &.light {
+    --background: #F1F5F9;
+    --background-secondary: #E2E8F0;
+    --card: #FFFFFF;
+    --card-hover: #F8FAFC;
+    --border: rgba(15, 23, 42, 0.08);
+    --border-hover: rgba(15, 23, 42, 0.16);
+    --foreground: #0F172A;
+    --muted: #64748B;
+    --muted-bg: rgba(15, 23, 42, 0.04);
   }
 }
 
+/* Tailwind's Preflight already resets margin/padding and sets border-box inside
+   `@layer base`. Re-declaring them here unlayered would outrank every utility in
+   `@layer utilities` — unlayered CSS always wins over layered CSS — which silently
+   kills every p-*, px-*, m-* and mx-auto in the app. Leave the reset to Preflight. */
+
+html {
+  -webkit-tap-highlight-color: transparent;
+  scroll-behavior: smooth;
+  /* body alone doesn't paint the overscroll region — under viewport-fit:cover
+     iOS rubber-banding would otherwise flash white. */
+  background: var(--background);
+}
+
 body {
+  font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-hover); border-radius: 99px; }
+
+/* ── Custom Utilities ── */
+.orbit-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  transition: all 0.2s ease;
+}
+
+.orbit-card:hover {
+  border-color: var(--border-hover);
+  box-shadow: var(--shadow-float);
+}
+
+.orbit-glass {
+  background: rgba(30, 41, 59, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  /* No all-round border: these bars are full-bleed on mobile but sit inside the
+     centred column on desktop, where a boxed outline reads as an stray panel.
+     Consumers add the single edge they need (header bottom / nav top). */
+}
+
+.light .orbit-glass {
+  background: rgba(255, 255, 255, 0.8);
+}
+
+/* ── Progress Bar Gradient ── */
+.orbit-progress {
+  background: linear-gradient(90deg, #3B82F6, #06B6D4);
+  border-radius: 99px;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── Gradient Text ── */
+.gradient-text {
+  background: linear-gradient(135deg, #3B82F6, #06B6D4, #8B5CF6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── Bottom nav spacer ── */
+/* ── Startup splash ── */
+.orbit-splash {
+  position: fixed;
+  inset: 0;
+  /* Above BottomNav (z-50) and the FAB (z-40). */
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  background: var(--background);
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  transition: opacity 320ms ease;
+}
+
+.orbit-splash--leaving {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.orbit-splash__wordmark {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.32em;
+  text-indent: 0.32em; /* offsets the trailing letter-space so it reads centred */
+  color: var(--muted);
+}
+
+.orbit-splash__mark {
+  animation: splash-breathe 2.4s ease-in-out infinite;
+}
+
+@keyframes splash-breathe {
+  0%, 100% { transform: scale(1); opacity: 0.95; }
+  50% { transform: scale(1.06); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .orbit-splash { transition: none; }
+  .orbit-splash__mark { animation: none; }
+}
+
+/* ── Touch target ── */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Animations ── */
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(59, 130, 246, 0); }
+}
+
+.animate-slide-up { animation: slide-up 0.3s ease forwards; }
+.animate-fade-in { animation: fade-in 0.25s ease forwards; }
+.animate-scale-in { animation: scale-in 0.2s ease forwards; }
+
+/* ── Priority badge glow ── */
+.priority-critical { animation: pulse-glow 2s ease-in-out infinite; }
+
+/* ── Stagger delays ── */
+.delay-75 { animation-delay: 75ms; }
+.delay-150 { animation-delay: 150ms; }
+.delay-225 { animation-delay: 225ms; }
+.delay-300 { animation-delay: 300ms; }
+
+/* ── Chip styles ── */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 99px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: 1px solid var(--border);
+  background: var(--muted-bg);
+  color: var(--muted);
+  user-select: none;
+}
+
+.chip.active {
+  background: rgba(59, 130, 246, 0.15);
+  border-color: rgba(59, 130, 246, 0.4);
+  color: #3B82F6;
+}
+
+/* ── FAB ── */
+.fab {
+  position: fixed;
+  bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px) + 20px);
+  /* Hugs the viewport edge on phones; from the container breakpoint up it tracks
+     the right edge of the centred max-w-2xl (672px) column. 50vw - 336 + 20. */
+  right: max(calc(20px + env(safe-area-inset-right, 0px)), calc(50vw - 316px));
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3B82F6, #2563EB);
+  box-shadow: 0 4px 20px rgba(59, 130, 246, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: none;
+  color: white;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
+  z-index: 40;
+}
+
+.fab:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 28px rgba(59, 130, 246, 0.6);
+}
+
+.fab:active {
+  transform: scale(0.95);
+}
+
+/* ── Input overrides for dark theme ── */
+input, textarea, select {
+  color-scheme: dark;
+}
+
+.light input, .light textarea, .light select {
+  color-scheme: light;
+}
+
+/* ── Stat card gradient borders ── */
+.stat-card-primary { border-left: 3px solid #3B82F6; }
+.stat-card-pending { border-left: 3px solid #F59E0B; }
+.stat-card-ongoing { border-left: 3px solid #06B6D4; }
+.stat-card-completed { border-left: 3px solid #10B981; }
