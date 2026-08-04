@@ -6,7 +6,7 @@
  *
  * Idempotent — safe to re-run after editing public/icons/icon*.svg.
  */
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { access, mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
@@ -122,7 +122,51 @@ async function main() {
     .toBuffer();
   await log(path.join(PUBLIC, 'apple-touch-icon.png'), apple);
 
+  await generateAvatar();
+
   console.log('\nDone.\n');
+}
+
+/**
+ * Profile photo → a small square avatar.
+ *
+ * The source is a full portrait, so it's cropped to the head before resizing —
+ * a straight square resize leaves the face too small to read in a 36px circle.
+ * The window is fixed rather than sharp's `attention` strategy, because the
+ * source is already square and every automatic strategy therefore picked
+ * essentially the whole frame.
+ *
+ * Skipped silently when there's no profile photo; the UI falls back to initials.
+ */
+async function generateAvatar() {
+  const source = path.join(PUBLIC, 'profile.jpeg');
+  try {
+    await access(source);
+  } catch {
+    console.log('\nAvatar: no public/profile.jpeg — skipping (UI falls back to initials)');
+    return;
+  }
+
+  const HEAD_CROP = { left: 300, top: 0, width: 1100, height: 1100 };
+  const { width = 0, height = 0 } = await sharp(source).metadata();
+
+  // Only crop when the source is big enough to contain the window; otherwise
+  // fall back to a plain square cover so a replacement photo can't break this.
+  const fits = width >= HEAD_CROP.left + HEAD_CROP.width && height >= HEAD_CROP.top + HEAD_CROP.height;
+  if (!fits) {
+    console.log(`\nAvatar: source is ${width}x${height}, too small for the head crop — using a centre square`);
+  }
+
+  let pipeline = sharp(source);
+  if (fits) pipeline = pipeline.extract(HEAD_CROP);
+
+  const buf = await pipeline
+    .resize(192, 192, { fit: 'cover' })
+    .jpeg({ quality: 88, mozjpeg: true })
+    .toBuffer();
+
+  console.log('\nAvatar (192px covers the 36px header and 48px settings tile at 3x)');
+  await log(path.join(PUBLIC, 'avatar-192.jpg'), buf);
 }
 
 main().catch((err) => {

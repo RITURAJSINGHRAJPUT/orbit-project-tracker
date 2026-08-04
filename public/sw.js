@@ -21,6 +21,7 @@ const STATIC_ASSETS = [
   '/icons/icon-512.png',
   '/icons/maskable-512.png',
   '/apple-touch-icon.png',
+  '/avatar-192.jpg',
 ];
 
 // Documents worth having before the user navigates to them.

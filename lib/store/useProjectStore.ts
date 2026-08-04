@@ -88,8 +88,11 @@ export const useProjectStore = create<ProjectStore>()(
           priority: data.priority,
           type: data.type,
           progress: data.progress,
-          startDate: data.startDate ?? null,
-          dueDate: data.dueDate ?? null,
+          // <input type="date"> yields '' when cleared, not null. Normalise so
+          // the value round-trips through Supabase unchanged (toRow maps '' to
+          // null) and truthiness checks in the UI behave.
+          startDate: data.startDate || null,
+          dueDate: data.dueDate || null,
           createdAt: now,
           updatedAt: now,
           techStack: data.techStack ?? [],

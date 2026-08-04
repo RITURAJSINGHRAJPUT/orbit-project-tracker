@@ -39,3 +39,13 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Android signing material from PWABuilder.
+# These are private keys — committing them would let anyone publish updates
+# signed as you. Keep them backed up somewhere permanent OUTSIDE this repo.
+# (public/.well-known/assetlinks.json is the public half and SHOULD be committed.)
+*.keystore
+*.jks
+signing-key-info.txt
+*.apk
+*.aab

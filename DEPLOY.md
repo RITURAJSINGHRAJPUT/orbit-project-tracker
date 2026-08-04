@@ -218,7 +218,7 @@ Check:
 | Icon changes not showing | Bump `VERSION` in `public/sw.js`, redeploy, then reinstall the APK. Android also caches launcher icons aggressively. |
 | White splash on a new iPhone | That device isn't in `APPLE_SPLASH_SCREENS`. Add a row (see §1) and `npm run splash`. |
 | PWABuilder rejects the manifest icon | Remove the trailing `icon.svg` entry from `manifest.json` — the PNGs alone satisfy installability. |
-| `/.well-known/assetlinks.json` 404s | Add to `next.config.ts`: `async rewrites() { return [{ source: '/.well-known/assetlinks.json', destination: '/assetlinks.json' }] }` and move the file to `public/assetlinks.json`. |
+| `/.well-known/assetlinks.json` 404s | Shouldn't happen — Next serves the dotfolder from `public/` (verified: `200`, `application/json`). If a host ever strips it, add `async rewrites() { return [{ source: '/.well-known/assetlinks.json', destination: '/assetlinks.json' }] }` to `next.config.ts` and move the file to `public/assetlinks.json`. |
 | `next build` fails fetching fonts | `next/font/google` downloads Inter at build time. Needs network (Vercel has it). Offline fallback: switch to `next/font/local` with the woff2 committed. |
 
 ---

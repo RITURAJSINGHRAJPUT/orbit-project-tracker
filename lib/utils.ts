@@ -41,3 +41,22 @@ export function getDueDateLabel(dateStr: string | null | undefined): { label: st
 export function generateId(): string {
   return crypto.randomUUID();
 }
+
+/**
+ * Progress bar colour. Shared by the project card and the detail sheet so a
+ * project reads the same in both places.
+ */
+export function getProgressColor(progress: number): string {
+  if (progress >= 80) return '#10B981';
+  if (progress >= 50) return '#3B82F6';
+  if (progress >= 25) return '#F59E0B';
+  return '#94A3B8';
+}
+
+/**
+ * A project is "done" if it's at 100% or explicitly marked completed. Shared so
+ * the card and the detail sheet agree on when to stop the progress shimmer.
+ */
+export function isProjectComplete(progress: number, status: string): boolean {
+  return progress >= 100 || status === 'completed';
+}

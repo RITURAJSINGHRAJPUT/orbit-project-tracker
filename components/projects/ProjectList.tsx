@@ -8,11 +8,12 @@ import { ProjectCard } from './ProjectCard';
 interface ProjectListProps {
   projects: Project[];
   isLoading: boolean;
+  onView: (project: Project) => void;
   onEdit: (project: Project) => void;
   emptyMessage?: string;
 }
 
-export function ProjectList({ projects, isLoading, onEdit, emptyMessage }: ProjectListProps) {
+export function ProjectList({ projects, isLoading, onView, onEdit, emptyMessage }: ProjectListProps) {
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 px-4">
@@ -63,6 +64,7 @@ export function ProjectList({ projects, isLoading, onEdit, emptyMessage }: Proje
             key={project.id}
             project={project}
             index={i}
+            onView={onView}
             onEdit={onEdit}
           />
         ))}

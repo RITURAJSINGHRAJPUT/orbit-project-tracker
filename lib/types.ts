@@ -96,3 +96,23 @@ export const STATUS_COLORS: Record<ProjectStatus, string> = {
   completed: 'text-green-400 bg-green-400/10',
   archived: 'text-slate-400 bg-slate-400/10',
 };
+
+/**
+ * Link fields in display order, with the icon each one uses.
+ *
+ * Icons are named rather than imported here so this module stays free of React
+ * dependencies; consumers map the name to a lucide component.
+ */
+export const LINK_FIELDS = [
+  { key: 'github', label: 'GitHub', icon: 'GitBranch', placeholder: 'https://github.com/...' },
+  { key: 'figma', label: 'Figma', icon: 'Pen', placeholder: 'https://figma.com/...' },
+  { key: 'production', label: 'Production', icon: 'Globe', placeholder: 'https://...' },
+  { key: 'staging', label: 'Staging', icon: 'Server', placeholder: 'https://staging...' },
+  { key: 'documentation', label: 'Docs', icon: 'BookOpen', placeholder: 'https://docs...' },
+  { key: 'drive', label: 'Google Drive', icon: 'FolderOpen', placeholder: 'https://drive.google.com/...' },
+] as const satisfies ReadonlyArray<{
+  key: keyof ProjectLinks;
+  label: string;
+  icon: string;
+  placeholder: string;
+}>;

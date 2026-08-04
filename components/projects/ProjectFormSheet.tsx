@@ -16,8 +16,9 @@ import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { projectSchema, ProjectFormData } from '@/lib/validations/project.schema';
-import { Project, TECH_STACK_OPTIONS, PROJECT_TYPE_LABELS } from '@/lib/types';
+import { Project, TECH_STACK_OPTIONS, PROJECT_TYPE_LABELS, LINK_FIELDS } from '@/lib/types';
 import { useProjectStore } from '@/lib/store/useProjectStore';
+import { ProjectSection as Section } from './ProjectSection';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -43,14 +44,31 @@ const STATUS_COLORS_MAP = {
   completed: { bg: 'rgba(16,185,129,0.12)', border: 'rgba(16,185,129,0.4)', text: '#10B981' },
 };
 
-const LINK_FIELDS = [
-  { key: 'github', label: 'GitHub', icon: GitBranch, placeholder: 'https://github.com/...' },
-  { key: 'figma', label: 'Figma', icon: Pen, placeholder: 'https://figma.com/...' },
-  { key: 'production', label: 'Production', icon: Globe, placeholder: 'https://...' },
-  { key: 'staging', label: 'Staging', icon: Server, placeholder: 'https://staging...' },
-  { key: 'documentation', label: 'Docs', icon: BookOpen, placeholder: 'https://docs...' },
-  { key: 'drive', label: 'Google Drive', icon: FolderOpen, placeholder: 'https://drive.google.com/...' },
-] as const;
+/** Maps the shared LINK_FIELDS icon names to their lucide components. */
+const LINK_ICONS = { GitBranch, Pen, Globe, Server, BookOpen, FolderOpen } as const;
+
+/**
+ * The blank form. Module-level and passed explicitly to every reset, so it can
+ * never be replaced by react-hook-form's internal default tracking.
+ */
+const EMPTY_PROJECT_FORM: ProjectFormData = {
+  title: '',
+  client: '',
+  description: '',
+  status: 'pending',
+  priority: 'medium',
+  type: 'web-app',
+  progress: 0,
+  startDate: null,
+  dueDate: null,
+  techStack: [],
+  modules: [],
+  // Every key spelled out: projectLinksSchema defaults each one, so the parsed
+  // shape requires all six.
+  links: { github: '', figma: '', production: '', staging: '', documentation: '', drive: '' },
+  notes: '',
+  tags: [],
+};
 
 export function ProjectFormSheet({ open, onClose, project }: ProjectFormSheetProps) {
   const { addProject, updateProject } = useProjectStore();
@@ -69,22 +87,7 @@ export function ProjectFormSheet({ open, onClose, project }: ProjectFormSheetPro
     formState: { errors, isDirty },
   } = useForm<ProjectFormData>({
     resolver: zodResolver(projectSchema) as any,
-    defaultValues: {
-      title: '',
-      client: '',
-      description: '',
-      status: 'pending',
-      priority: 'medium',
-      type: 'web-app',
-      progress: 0,
-      startDate: null,
-      dueDate: null,
-      techStack: [],
-      modules: [],
-      links: {},
-      notes: '',
-      tags: [],
-    },
+    defaultValues: EMPTY_PROJECT_FORM,
   });
 
   // Populate form when editing
@@ -107,7 +110,12 @@ export function ProjectFormSheet({ open, onClose, project }: ProjectFormSheetPro
         tags: project.tags,
       });
     } else {
-      reset();
+      // Must pass the blank values explicitly. A bare reset() falls back to
+      // react-hook-form's INTERNAL _defaultValues, and reset(values) overwrites
+      // those — so once any project had been edited, opening "+" restored that
+      // project instead of a blank form, and saving updated it rather than
+      // creating anything. (see _reset in react-hook-form/dist/index.esm.mjs)
+      reset(EMPTY_PROJECT_FORM);
     }
   }, [project, reset, open]);
 
@@ -486,7 +494,9 @@ export function ProjectFormSheet({ open, onClose, project }: ProjectFormSheetPro
               {/* ── Section 6: Links ── */}
               <Section title="Links">
                 <div className="space-y-3">
-                  {LINK_FIELDS.map(({ key, label, icon: Icon, placeholder }) => (
+                  {LINK_FIELDS.map(({ key, label, icon, placeholder }) => {
+                    const Icon = LINK_ICONS[icon];
+                    return (
                     <div key={key} className="flex items-center gap-2">
                       <div
                         className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
@@ -501,7 +511,8 @@ export function ProjectFormSheet({ open, onClose, project }: ProjectFormSheetPro
                         className="h-9 flex-1 text-sm"
                       />
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </Section>
 
@@ -546,19 +557,5 @@ export function ProjectFormSheet({ open, onClose, project }: ProjectFormSheetPro
         </div>
       </SheetContent>
     </Sheet>
-  );
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <div className="flex items-center gap-3 mb-3">
-        <h3 className="text-sm font-semibold uppercase tracking-wider" style={{ color: 'var(--primary)' }}>
-          {title}
-        </h3>
-        <div className="flex-1 h-px" style={{ background: 'var(--border)' }} />
-      </div>
-      <div className="space-y-3">{children}</div>
-    </div>
   );
 }

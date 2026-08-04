@@ -3,7 +3,8 @@
 import Link from 'next/link';
 import { Bell } from 'lucide-react';
 import { OrbitLogo } from '@/components/brand/OrbitLogo';
-import { PROFILE, profileInitials } from '@/lib/profile';
+import { Avatar } from '@/components/brand/Avatar';
+import { PROFILE } from '@/lib/profile';
 
 interface AppHeaderProps {
   title: string;
@@ -52,12 +53,7 @@ export function AppHeader({ title, subtitle }: AppHeaderProps) {
         aria-label={`Profile — ${PROFILE.name}`}
         className="flex h-11 w-11 flex-shrink-0 items-center justify-center"
       >
-        <span
-          className="flex h-9 w-9 items-center justify-center rounded-full text-xs font-semibold text-white"
-          style={{ background: 'linear-gradient(135deg, #3B82F6, #8B5CF6)' }}
-        >
-          {profileInitials()}
-        </span>
+        <Avatar size={36} />
       </Link>
     </div>
   );

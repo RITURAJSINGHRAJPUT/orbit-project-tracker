@@ -2,32 +2,29 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MoreVertical, Edit2, Trash2, Copy, Archive, ExternalLink, ChevronRight } from 'lucide-react';
+import { MoreVertical, Edit2, Trash2, Copy, Archive } from 'lucide-react';
 import { Project, PRIORITY_COLORS, STATUS_COLORS, PROJECT_TYPE_LABELS } from '@/lib/types';
-import { formatRelativeDate, getDueDateLabel, cn } from '@/lib/utils';
+import { formatRelativeDate, getDueDateLabel, getProgressColor, isProjectComplete, cn } from '@/lib/utils';
 import { useProjectStore } from '@/lib/store/useProjectStore';
 import { toast } from 'sonner';
 
 interface ProjectCardProps {
   project: Project;
   index?: number;
+  /** Tapping the card body — opens the read-only detail sheet. */
+  onView: (project: Project) => void;
+  /** The overflow menu's Edit item — opens the form. */
   onEdit: (project: Project) => void;
 }
 
-export function ProjectCard({ project, index = 0, onEdit }: ProjectCardProps) {
+export function ProjectCard({ project, index = 0, onView, onEdit }: ProjectCardProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const { deleteProject, duplicateProject, archiveProject, restoreProject } = useProjectStore();
   const { label: dueLabel, color: dueColor } = getDueDateLabel(project.dueDate);
 
   const priorityLabel = project.priority.toUpperCase();
-  const progressColor =
-    project.progress >= 80
-      ? '#10B981'
-      : project.progress >= 50
-      ? '#3B82F6'
-      : project.progress >= 25
-      ? '#F59E0B'
-      : '#94A3B8';
+  const progressColor = getProgressColor(project.progress);
+  const complete = isProjectComplete(project.progress, project.status);
 
   const handleDelete = async () => {
     setMenuOpen(false);
@@ -64,7 +61,7 @@ export function ProjectCard({ project, index = 0, onEdit }: ProjectCardProps) {
       exit={{ opacity: 0, y: -8, scale: 0.97 }}
       transition={{ delay: index * 0.05, duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
       className="orbit-card p-4 cursor-pointer active:scale-[0.99] select-none"
-      onClick={() => onEdit(project)}
+      onClick={() => onView(project)}
     >
       {/* Header */}
       <div className="flex items-start justify-between gap-2 mb-3">
@@ -188,7 +185,7 @@ export function ProjectCard({ project, index = 0, onEdit }: ProjectCardProps) {
           style={{ background: 'var(--muted-bg)' }}
         >
           <motion.div
-            className="h-full rounded-full"
+            className={cn('h-full rounded-full', !complete && 'orbit-progress-active')}
             style={{ background: `linear-gradient(90deg, ${progressColor}, ${progressColor}88)` }}
             initial={{ width: 0 }}
             animate={{ width: `${project.progress}%` }}

@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { useTheme } from '@/components/providers/ThemeProvider';
 import { AppHeader } from '@/components/layout/AppHeader';
-import { OrbitLogo } from '@/components/brand/OrbitLogo';
+import { Avatar } from '@/components/brand/Avatar';
 import { PROFILE } from '@/lib/profile';
 import { useProjectStore } from '@/lib/store/useProjectStore';
 import { toast } from 'sonner';
@@ -139,15 +139,7 @@ export default function SettingsPage() {
             className="orbit-card p-4"
           >
             <div className="flex items-center gap-3">
-              <div
-                className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0"
-                style={{
-                  background: 'rgba(59,130,246,0.10)',
-                  border: '1px solid var(--border)',
-                }}
-              >
-                <OrbitLogo className="w-8 h-8" />
-              </div>
+              <Avatar size={48} />
               <div className="min-w-0">
                 <p className="font-semibold truncate" style={{ color: 'var(--foreground)' }}>
                   {PROFILE.name}

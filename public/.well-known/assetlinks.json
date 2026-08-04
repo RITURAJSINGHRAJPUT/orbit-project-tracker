@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "in.click2pdf.orbit.twa",
+      "sha256_cert_fingerprints": [
+        "9F:88:ED:D8:CD:E9:D6:3C:4F:3B:87:9F:15:1B:09:25:39:F6:6E:40:2A:83:AE:6A:17:D5:83:35:F9:61:BF:FC"
+      ]
+    }
+  }
+]

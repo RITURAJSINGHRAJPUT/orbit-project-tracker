@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Plus } from 'lucide-react';
 import { AppHeader } from '@/components/layout/AppHeader';
@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ProjectList } from '@/components/projects/ProjectList';
 import { SearchBar } from '@/components/projects/SearchBar';
 import { ProjectFormSheet } from '@/components/projects/ProjectFormSheet';
+import { ProjectDetailSheet } from '@/components/projects/ProjectDetailSheet';
 import { useProjectStore } from '@/lib/store/useProjectStore';
 import { Project } from '@/lib/types';
 
@@ -15,6 +16,8 @@ export default function ProjectsPage() {
   const { getFilteredProjects, isLoading, activeTab, setActiveTab } = useProjectStore();
   const [formOpen, setFormOpen] = useState(false);
   const [editProject, setEditProject] = useState<Project | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [viewProject, setViewProject] = useState<Project | null>(null);
 
   const pending = getFilteredProjects('pending');
   const ongoing = getFilteredProjects('ongoing');
@@ -23,6 +26,41 @@ export default function ProjectsPage() {
   const handleEdit = (project: Project) => {
     setEditProject(project);
     setFormOpen(true);
+  };
+
+  // Clearing viewProject is deferred so the sheet keeps its content through the
+  // close animation. The handle is kept so a rapid second tap can cancel it —
+  // otherwise the stale timer nulls the project while the sheet is reopening,
+  // and ProjectDetailSheet renders null with `open` stuck true.
+  const detailTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const clearDetailTimer = () => {
+    if (detailTimer.current) clearTimeout(detailTimer.current);
+    detailTimer.current = null;
+  };
+  useEffect(() => clearDetailTimer, []);
+
+  // Tapping the card body — read-only.
+  const handleView = (project: Project) => {
+    clearDetailTimer();
+    setViewProject(project);
+    setDetailOpen(true);
+  };
+
+  // Detail -> Edit: close the detail sheet first, then open the form once its
+  // exit animation has run, so the two sheets never animate on top of each other.
+  const handleEditFromDetail = (project: Project) => {
+    clearDetailTimer();
+    setDetailOpen(false);
+    detailTimer.current = setTimeout(() => {
+      setViewProject(null);
+      handleEdit(project);
+    }, 220);
+  };
+
+  const handleDetailClose = () => {
+    clearDetailTimer();
+    setDetailOpen(false);
+    detailTimer.current = setTimeout(() => setViewProject(null), 220);
   };
 
   const handleClose = () => {
@@ -99,6 +137,7 @@ export default function ProjectsPage() {
           <ProjectList
             projects={pending}
             isLoading={isLoading}
+            onView={handleView}
             onEdit={handleEdit}
             emptyMessage="No pending projects. Tap + to add one!"
           />
@@ -107,6 +146,7 @@ export default function ProjectsPage() {
           <ProjectList
             projects={ongoing}
             isLoading={isLoading}
+            onView={handleView}
             onEdit={handleEdit}
             emptyMessage="No active projects right now."
           />
@@ -115,6 +155,7 @@ export default function ProjectsPage() {
           <ProjectList
             projects={completed}
             isLoading={isLoading}
+            onView={handleView}
             onEdit={handleEdit}
             emptyMessage="No completed projects yet. Keep going! 🚀"
           />
@@ -133,6 +174,13 @@ export default function ProjectsPage() {
       </motion.button>
 
       {/* Form Sheet */}
+      <ProjectDetailSheet
+        open={detailOpen}
+        onClose={handleDetailClose}
+        onEdit={handleEditFromDetail}
+        project={viewProject}
+      />
+
       <ProjectFormSheet
         open={formOpen}
         onClose={handleClose}
