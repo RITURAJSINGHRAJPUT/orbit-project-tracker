@@ -238,9 +238,39 @@ The app stays local-first either way: IndexedDB remains the source of truth, eve
 ### 9b. Configure auth
 
 - **Auth → URL Configuration** → add your Vercel URL as Site URL, and add both `https://<your-app>.vercel.app/auth/callback` and `http://localhost:3000/auth/callback` to Redirect URLs.
-- **Auth → Email Templates → Magic Link** → make sure the template includes **`{{ .Token }}`** as well as `{{ .ConfirmationURL }}`. The app's primary sign-in is the 6-digit code, and without that variable the email won't contain one.
+
+- **Auth → Emails → Templates** → add **`{{ .Token }}`** to **two** templates, not one:
+
+  | Template | When it's used |
+  |---|---|
+  | **Confirm signup** | The very first time an address signs in — no account exists yet |
+  | **Magic Link** | Every sign-in after that |
+
+  It's easy to only do Magic Link and then wonder why the first email has a link but no code. Something like:
+
+  ```html
+  <h2>Confirm your email</h2>
+  <p>Your Orbit verification code is:</p>
+  <p style="font-size:30px;font-weight:700;letter-spacing:6px">{{ .Token }}</p>
+  <hr>
+  <p>Or <a href="{{ .ConfirmationURL }}">confirm by link</a>.</p>
+  ```
+
+  Editing a template doesn't affect emails already sent — request a fresh code after saving.
 
 > Why the code and not just the link: tapping a magic link on a phone often opens a *different* browser than the installed app, so the session lands somewhere you can't see. Typing the code keeps everything in one window. The link still works on desktop.
+>
+> The app handles the token-type difference for you: a first-time code verifies as `signup` and a returning one as `email`, and `SignInSheet` tries both — otherwise a correct code would be rejected on first use.
+
+### Email sending limits (no SMTP configured)
+
+This setup uses **Supabase's built-in email sender**, which is fine for a personal single-user app but has real limits worth knowing before they surprise you:
+
+- **Roughly 2 emails per hour** on the free tier. Enough for occasional sign-ins; you *will* hit it while testing, and the symptom is simply no email arriving. Wait an hour rather than assuming something is broken.
+- **Deliverability is mediocre** — check spam if a code doesn't show up.
+- Supabase marks it as not intended for production.
+
+Since you sign in rarely and only from your own devices, that's an acceptable trade. If it becomes annoying, add custom SMTP under **Project Settings → Authentication → SMTP Settings** — Brevo (300/day free, works with just a verified sender address, no domain needed) or Resend (3,000/month, better deliverability, wants a domain) are both straightforward. Nothing in the app changes; it's purely a dashboard setting.
 
 ### 9c. Set the keys
 
@@ -267,7 +297,9 @@ After that, sync runs on sign-in, when the device comes back online, when the ap
 | Symptom | Cause / fix |
 |---|---|
 | No "Cloud Sync" section in Settings | The keys aren't set, or the URL doesn't look like `https://….supabase.co`. Placeholder values are rejected on purpose. |
-| Email arrives with a link but no code | The Magic Link template is missing `{{ .Token }}` (§9b). |
+| Email arrives with a link but no code | The template is missing `{{ .Token }}`. On a **first** sign-in that's **Confirm signup**, not Magic Link — both need it (§9b). |
+| No email arrives at all | Most likely the built-in sender's ~2/hour limit — wait an hour, and check spam. See "Email sending limits" above. |
+| The emailed link doesn't sign you in | It points at wherever you started the sign-in, so a link from `localhost` won't open on your phone, and the URL must be in Supabase's Redirect URLs. Use the 6-digit code instead — it doesn't depend on either. |
 | "Sync failed" | Usually the schema or RLS policy hasn't been run — check §9a. The error surfaces under the account row in Settings. Data is never lost: rows stay marked pending and retry. |
 | Signed in but nothing uploads | Confirm the SQL ran against the same project the keys point at. |
 | Changes not appearing on the other device | Sync is pull-on-foreground, not realtime. Background the app and reopen it, or tap **Sync now**. |

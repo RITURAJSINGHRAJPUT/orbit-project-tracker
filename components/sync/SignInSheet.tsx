@@ -63,12 +63,21 @@ export function SignInSheet({ open, onClose }: SignInSheetProps) {
     if (!supabase || code.trim().length < 6) return;
     setBusy(true);
     try {
-      const { error } = await supabase.auth.verifyOtp({
-        email: email.trim(),
-        token: code.trim(),
-        type: 'email',
-      });
+      const token = code.trim();
+      const addr = email.trim();
+
+      // The token's type depends on whether this address already had an
+      // account. A returning user's code comes from the Magic Link flow
+      // ('email'); a brand-new one comes from Confirm signup ('signup'), and
+      // the wrong type is rejected even when the digits are right. There's no
+      // way to know which up front, so try the common case and fall back.
+      let { error } = await supabase.auth.verifyOtp({ email: addr, token, type: 'email' });
+      if (error) {
+        const retry = await supabase.auth.verifyOtp({ email: addr, token, type: 'signup' });
+        if (!retry.error) error = null;
+      }
       if (error) throw error;
+
       toast.success('Signed in — syncing your projects');
       handleClose();
     } catch (err) {
