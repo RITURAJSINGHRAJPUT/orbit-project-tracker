@@ -2,7 +2,6 @@
 
 import { useEffect, useRef } from 'react';
 import { BottomNav } from './BottomNav';
-import { SplashScreen } from './SplashScreen';
 import { useProjectStore } from '@/lib/store/useProjectStore';
 import { useSyncStore } from '@/lib/sync/useSyncStore';
 
@@ -56,9 +55,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="mx-auto w-full max-w-2xl">{children}</div>
       </main>
       <BottomNav />
-      {/* Sibling of the app, never a wrapper — a fixed overlay on top. If the
-          splash misbehaves, the app underneath is still mounted and usable. */}
-      <SplashScreen />
     </div>
   );
 }

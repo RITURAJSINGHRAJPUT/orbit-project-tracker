@@ -149,49 +149,7 @@ body {
   background-clip: text;
 }
 
-/* ── Bottom nav spacer ── */
-/* ── Startup splash ── */
-.orbit-splash {
-  position: fixed;
-  inset: 0;
-  /* Above BottomNav (z-50) and the FAB (z-40). */
-  z-index: 100;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 18px;
-  background: var(--background);
-  padding-top: env(safe-area-inset-top, 0px);
-  padding-bottom: env(safe-area-inset-bottom, 0px);
-  transition: opacity 320ms ease;
-}
-
-.orbit-splash--leaving {
-  opacity: 0;
-  pointer-events: none;
-}
-
-.orbit-splash__wordmark {
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.32em;
-  text-indent: 0.32em; /* offsets the trailing letter-space so it reads centred */
-  color: var(--muted);
-}
-
-.orbit-splash__mark {
-  animation: splash-breathe 2.4s ease-in-out infinite;
-}
-
-@keyframes splash-breathe {
-  0%, 100% { transform: scale(1); opacity: 0.95; }
-  50% { transform: scale(1.06); opacity: 1; }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .orbit-splash { transition: none; }
-  .orbit-splash__mark { animation: none; }
   .orbit-progress-active::after { animation: none; content: none; }
 }
 

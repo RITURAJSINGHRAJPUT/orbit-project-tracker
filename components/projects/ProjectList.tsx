@@ -7,14 +7,20 @@ import { ProjectCard } from './ProjectCard';
 
 interface ProjectListProps {
   projects: Project[];
-  isLoading: boolean;
+  /**
+   * False until the first IndexedDB read settles. Gating on this rather than
+   * `isLoading` matters twice over: `isLoading` starts false, so the empty
+   * state would flash before loading even begins; and it flips back to true on
+   * every background sync refresh, which would blank an already-populated list.
+   */
+  hasLoaded: boolean;
   onView: (project: Project) => void;
   onEdit: (project: Project) => void;
   emptyMessage?: string;
 }
 
-export function ProjectList({ projects, isLoading, onView, onEdit, emptyMessage }: ProjectListProps) {
-  if (isLoading) {
+export function ProjectList({ projects, hasLoaded, onView, onEdit, emptyMessage }: ProjectListProps) {
+  if (!hasLoaded) {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 px-4">
         {[1, 2, 3].map((i) => (

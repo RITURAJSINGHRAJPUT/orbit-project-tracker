@@ -13,7 +13,7 @@ import { useProjectStore } from '@/lib/store/useProjectStore';
 import { Project } from '@/lib/types';
 
 export default function ProjectsPage() {
-  const { getFilteredProjects, isLoading, activeTab, setActiveTab } = useProjectStore();
+  const { getFilteredProjects, hasLoaded, activeTab, setActiveTab } = useProjectStore();
   const [formOpen, setFormOpen] = useState(false);
   const [editProject, setEditProject] = useState<Project | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
@@ -136,7 +136,7 @@ export default function ProjectsPage() {
         {activeTab === 'pending' && (
           <ProjectList
             projects={pending}
-            isLoading={isLoading}
+            hasLoaded={hasLoaded}
             onView={handleView}
             onEdit={handleEdit}
             emptyMessage="No pending projects. Tap + to add one!"
@@ -145,7 +145,7 @@ export default function ProjectsPage() {
         {activeTab === 'ongoing' && (
           <ProjectList
             projects={ongoing}
-            isLoading={isLoading}
+            hasLoaded={hasLoaded}
             onView={handleView}
             onEdit={handleEdit}
             emptyMessage="No active projects right now."
@@ -154,7 +154,7 @@ export default function ProjectsPage() {
         {activeTab === 'completed' && (
           <ProjectList
             projects={completed}
-            isLoading={isLoading}
+            hasLoaded={hasLoaded}
             onView={handleView}
             onEdit={handleEdit}
             emptyMessage="No completed projects yet. Keep going! 🚀"
