@@ -30,18 +30,33 @@ create table if not exists public.projects (
   client      text not null default '',
   description text not null default '',
 
-  status      text not null default 'pending'
-              check (status in ('pending', 'ongoing', 'completed', 'archived')),
+  status      text not null default 'draft'
+              check (status in ('draft', 'requirement-gathering', 'planning', 'in-progress',
+                                'on-hold', 'testing', 'completed', 'cancelled', 'archived')),
   priority    text not null default 'medium'
               check (priority in ('low', 'medium', 'high', 'critical')),
   type        text not null default 'web-app'
-              check (type in ('website', 'web-app', 'mobile-app', 'ai-automation',
-                              'api', 'internal-tool', 'other')),
+              check (type in ('website','web-app','mobile-app','pwa','ai-automation',
+                              'api','design','internal-tool','other')),
 
   progress    integer not null default 0 check (progress between 0 and 100),
 
-  start_date  date,
-  due_date    date,
+  poc_name          text not null default '',
+  poc_phone         text not null default '',
+  short_description text not null default '',
+  requirements      text not null default '',
+  deliverables      text not null default '',
+
+  client_company    text not null default '',
+  client_gst        text not null default '',
+  client_address    text not null default '',
+  client_website    text not null default '',
+  client_notes      text not null default '',
+
+  start_date        date,
+  due_date          date,
+  expected_end_date date,
+  actual_end_date   date,
 
   created_at  timestamptz not null,
   updated_at  timestamptz not null,
@@ -49,8 +64,19 @@ create table if not exists public.projects (
   tech_stack  text[] not null default '{}',
   modules     text[] not null default '{}',
   tags        text[] not null default '{}',
+  -- Fixed-shape nested objects, following the `links` precedent. Deliberately
+  -- NOT append-only lists: the whole row re-uploads on every edit, so a growing
+  -- array here would make upload cost grow with its length. Activity and
+  -- comments therefore need child tables, not columns.
   links       jsonb  not null default '{}'::jsonb,
-  notes       text   not null default '',
+  phases      jsonb  not null default '{}'::jsonb,
+  team        jsonb  not null default '{}'::jsonb,
+  documents   jsonb  not null default '{}'::jsonb,
+  budget      jsonb  not null default '{}'::jsonb,
+
+  notes          text not null default '',
+  internal_notes text not null default '',
+  meeting_notes  text not null default '',
 
   -- Tombstone. Deletes are soft so they can propagate to other devices;
   -- a hard delete would simply resurrect on the next pull.

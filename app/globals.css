@@ -141,6 +141,37 @@ body {
   to { transform: translateX(100%); }
 }
 
+/* ── Progress slider ──
+   Base UI exposes data-dragging on the root. The fill eases for jumps (tapping
+   the track, a programmatic change) but the transition is switched OFF while
+   dragging — otherwise the fill trails the thumb and the drag feels laggy. */
+.orbit-slider [data-slot='slider-range'] {
+  background: linear-gradient(90deg, #3B82F6, #06B6D4);
+  transition: width 280ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.orbit-slider[data-dragging] [data-slot='slider-range'] {
+  transition: none;
+}
+
+.orbit-slider [data-slot='slider-track'] {
+  height: 6px;
+  background: var(--muted-bg);
+}
+
+.orbit-slider [data-slot='slider-thumb'] {
+  width: 18px;
+  height: 18px;
+  border: 2px solid #3B82F6;
+  background: var(--card);
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.orbit-slider[data-dragging] [data-slot='slider-thumb'] {
+  transform: scale(1.2);
+  box-shadow: 0 0 0 7px rgba(59, 130, 246, 0.16);
+}
+
 /* ── Gradient Text ── */
 .gradient-text {
   background: linear-gradient(135deg, #3B82F6, #06B6D4, #8B5CF6);
@@ -151,6 +182,8 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .orbit-progress-active::after { animation: none; content: none; }
+  .orbit-slider [data-slot='slider-range'],
+  .orbit-slider [data-slot='slider-thumb'] { transition: none; }
 }
 
 /* ── Touch target ── */

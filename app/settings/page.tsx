@@ -14,7 +14,8 @@ import { useProjectStore } from '@/lib/store/useProjectStore';
 import { toast } from 'sonner';
 import { db } from '@/lib/db/dexie';
 import type { Project } from '@/lib/types';
-import { projectRecordSchema } from '@/lib/sync/mapper';
+import { projectRecordSchema, migrateLegacyProject } from '@/lib/sync/mapper';
+import { STATUS_GROUP } from '@/lib/types';
 import { isSupabaseConfigured } from '@/lib/supabase/client';
 import { useSyncStore } from '@/lib/sync/useSyncStore';
 import { SignInSheet } from '@/components/sync/SignInSheet';
@@ -66,7 +67,9 @@ export default function SettingsPage() {
         const valid: Project[] = [];
         let skipped = 0;
         for (const row of importedProjects) {
-          const parsed = projectRecordSchema.safeParse(row);
+          // Normalise pre-v2 status names first, or every row in an older
+          // backup fails validation and is silently skipped.
+          const parsed = projectRecordSchema.safeParse(migrateLegacyProject(row));
           if (parsed.success) valid.push(parsed.data as Project);
           else skipped += 1;
         }
@@ -155,8 +158,8 @@ export default function SettingsPage() {
             >
               {[
                 { label: 'Total', value: projects.filter((p) => !p.deletedAt).length },
-                { label: 'Active', value: projects.filter((p) => p.status === 'ongoing' && !p.deletedAt).length },
-                { label: 'Done', value: projects.filter((p) => p.status === 'completed' && !p.deletedAt).length },
+                { label: 'Active', value: projects.filter((p) => STATUS_GROUP[p.status] === 'ongoing' && !p.deletedAt).length },
+                { label: 'Done', value: projects.filter((p) => STATUS_GROUP[p.status] === 'completed' && !p.deletedAt).length },
               ].map(({ label, value }) => (
                 <div key={label}>
                   <p className="text-xl font-bold" style={{ color: 'var(--primary)' }}>{value}</p>

@@ -3,11 +3,20 @@
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
 import { useProjectStore } from '@/lib/store/useProjectStore';
 import { cn } from '@/lib/utils';
+import {
+  PRIORITY_LABELS,
+  PROJECT_TYPE_LABELS,
+  ProjectPriority,
+  ProjectType,
+} from '@/lib/types';
 
-const PRIORITY_OPTIONS = ['all', 'low', 'medium', 'high', 'critical'] as const;
-const TYPE_OPTIONS = [
-  'all', 'website', 'web-app', 'mobile-app', 'ai-automation', 'api', 'internal-tool', 'other',
-] as const;
+// Derived from the shared label maps rather than duplicated. These used to be
+// hand-written lists plus a nested-ternary labeller, so a new type or priority
+// silently never appeared as a filter.
+const PRIORITY_OPTIONS = ['all', ...(Object.keys(PRIORITY_LABELS) as ProjectPriority[])] as const;
+const TYPE_OPTIONS = ['all', ...(Object.keys(PROJECT_TYPE_LABELS) as ProjectType[])] as const;
+const optionLabel = (v: string, labels: Record<string, string>) =>
+  v === 'all' ? 'All' : (labels[v] ?? v);
 const SORT_OPTIONS = [
   { value: 'newest', label: 'Newest First' },
   { value: 'oldest', label: 'Oldest First' },
@@ -47,7 +56,7 @@ export function FilterSheet({ open, onClose }: FilterSheetProps) {
             {PRIORITY_OPTIONS.map((p) => (
               <FilterChip
                 key={p}
-                label={p === 'all' ? 'All' : p}
+                label={optionLabel(p, PRIORITY_LABELS)}
                 active={filters.priority === p}
                 onClick={() => setFilters({ priority: p })}
               />
@@ -59,9 +68,7 @@ export function FilterSheet({ open, onClose }: FilterSheetProps) {
         <FilterGroup label="Project Type">
           <div className="flex flex-wrap gap-2">
             {TYPE_OPTIONS.map((t) => {
-              const label = t === 'all' ? 'All' : t === 'web-app' ? 'Web App' :
-                t === 'mobile-app' ? 'Mobile App' : t === 'ai-automation' ? 'AI' :
-                t === 'internal-tool' ? 'Internal' : t.charAt(0).toUpperCase() + t.slice(1);
+              const label = optionLabel(t, PROJECT_TYPE_LABELS);
               return (
                 <FilterChip
                   key={t}

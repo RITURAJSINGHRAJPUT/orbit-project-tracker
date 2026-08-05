@@ -5,7 +5,7 @@ import { useProjectStore } from '@/lib/store/useProjectStore';
 import { Layers, Clock, Zap, CheckCircle2, TrendingUp, AlertCircle } from 'lucide-react';
 import { getDueDateLabel } from '@/lib/utils';
 import { AppHeader } from '@/components/layout/AppHeader';
-import { PRIORITY_COLORS } from '@/lib/types';
+import { PRIORITY_COLORS, ProjectPriority, isActiveStatus } from '@/lib/types';
 import {
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip,
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -18,7 +18,7 @@ const STAT_CARDS = [
   { key: 'completed', label: 'Completed', icon: CheckCircle2, color: '#10B981', class: 'stat-card-completed' },
 ] as const;
 
-const PRIORITY_CHART_COLORS = {
+const PRIORITY_CHART_COLORS: Record<ProjectPriority, string> = {
   low: '#10B981',
   medium: '#F59E0B',
   high: '#F97316',
@@ -32,7 +32,7 @@ export default function DashboardPage() {
 
   const priorityData = Object.entries(stats.byPriority)
     .filter(([, v]) => v > 0)
-    .map(([name, value]) => ({ name, value, color: PRIORITY_CHART_COLORS[name as keyof typeof PRIORITY_CHART_COLORS] }));
+    .map(([name, value]) => ({ name, value, color: PRIORITY_CHART_COLORS[name as ProjectPriority] }));
 
   const progressData = [
     { name: '0-25%', value: 0, color: '#94A3B8' },
@@ -42,7 +42,7 @@ export default function DashboardPage() {
   ];
 
   // compute from store
-  projects.filter((p) => !p.deletedAt && p.status !== 'archived').forEach((p) => {
+  projects.filter((p) => !p.deletedAt && isActiveStatus(p.status)).forEach((p) => {
     if (p.progress <= 25) progressData[0].value++;
     else if (p.progress <= 50) progressData[1].value++;
     else if (p.progress <= 75) progressData[2].value++;

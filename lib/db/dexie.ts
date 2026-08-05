@@ -1,5 +1,26 @@
 import Dexie, { Table } from 'dexie';
-import { Project } from '@/lib/types';
+import {
+  Project,
+  ProjectStatus,
+  emptyBudget,
+  emptyDocuments,
+  emptyPhases,
+  emptyTeam,
+} from '@/lib/types';
+
+const INDEXES =
+  'id, status, priority, type, dueDate, createdAt, updatedAt, syncStatus, deletedAt';
+
+/**
+ * v1 statuses → their v2 equivalents. Kept as a named export so the mapping is
+ * reviewable and easy to revise rather than buried in the upgrade closure.
+ */
+export const V1_STATUS_MIGRATION: Record<string, ProjectStatus> = {
+  pending: 'planning',
+  ongoing: 'in-progress',
+  completed: 'completed',
+  archived: 'archived',
+};
 
 export class OrbitDB extends Dexie {
   projects!: Table<Project, string>;
@@ -7,30 +28,86 @@ export class OrbitDB extends Dexie {
   constructor() {
     super('OrbitDB');
 
-    this.version(1).stores({
-      projects: 'id, status, priority, type, dueDate, createdAt, updatedAt, syncStatus, deletedAt',
-    });
+    this.version(1).stores({ projects: INDEXES });
+
+    /**
+     * v2 — the project-management expansion.
+     *
+     * Note this backfill only ever runs for databases that already exist at v1.
+     * A fresh install jumps straight to v2 with an empty table, so every default
+     * here must ALSO exist in the Zod schema and in `addProject` — the upgrade
+     * is not a substitute for either.
+     *
+     * Backfilling is mandatory, not cosmetic: no field on `Project` is optional
+     * and the UI reads e.g. `project.techStack.length` unguarded, so a row
+     * missing a new array would throw on first render.
+     */
+    this.version(2)
+      .stores({ projects: INDEXES })
+      .upgrade((tx) =>
+        tx
+          .table<Project>('projects')
+          .toCollection()
+          .modify((p) => {
+            const row = p as unknown as Record<string, unknown>;
+
+            p.status = V1_STATUS_MIGRATION[p.status as string] ?? 'draft';
+
+            row.pocName ??= '';
+            row.pocPhone ??= '';
+            row.shortDescription ??= '';
+            row.requirements ??= '';
+            row.deliverables ??= '';
+            row.expectedEndDate ??= null;
+            row.actualEndDate ??= null;
+            row.clientCompany ??= '';
+            row.clientGst ??= '';
+            row.clientAddress ??= '';
+            row.clientWebsite ??= '';
+            row.clientNotes ??= '';
+            row.internalNotes ??= '';
+            row.meetingNotes ??= '';
+            row.phases ??= emptyPhases();
+            row.team ??= emptyTeam();
+            row.documents ??= emptyDocuments();
+            row.budget ??= emptyBudget();
+
+            // Pre-existing rows could already be missing these.
+            row.techStack ??= [];
+            row.modules ??= [];
+            row.tags ??= [];
+            row.links ??= {};
+            row.notes ??= '';
+
+            // A migrated row must go up to the server: its status changed and it
+            // gained fields. The hooks don't fire inside an upgrade transaction.
+            p.syncStatus = 'pending';
+          })
+      );
   }
 }
 
 export const db = new OrbitDB();
 
 /**
- * When true, writes are NOT marked dirty. The sync engine sets this around its
- * own pull-writes — without it, applying a row from the server would mark it
- * pending, which would push it straight back, which would pull it again. Push
- * and pull would feed each other forever.
+ * Marker tagging a write as server-originated, so the hooks below don't mark it
+ * dirty — otherwise applying a pulled row would queue it straight back for
+ * upload and push/pull would feed each other forever.
+ *
+ * This used to be an ambient module-level boolean held across `await`s. That
+ * raced: a user deleting a project *while a sync was in flight* saw the flag
+ * still set, so the delete was never marked pending and silently never
+ * uploaded — the exact defect the hooks exist to prevent, since deleteProject
+ * and restoreProject rely on them entirely. Tagging the rows themselves is
+ * immune to timing.
+ *
+ * Stripped in the hooks; never persisted.
  */
-let suppressDirtyTracking = false;
+const FROM_SERVER = '__fromServer';
 
-/** Runs `fn` without marking anything it writes as needing sync. */
-export async function withoutDirtyTracking<T>(fn: () => Promise<T>): Promise<T> {
-  suppressDirtyTracking = true;
-  try {
-    return await fn();
-  } finally {
-    suppressDirtyTracking = false;
-  }
+/** Tags rows as server-originated. Use for every write that applies a pull. */
+export function fromServer<T extends object>(rows: T[]): T[] {
+  return rows.map((row) => ({ ...row, [FROM_SERVER]: true })) as T[];
 }
 
 /**
@@ -45,15 +122,21 @@ export async function withoutDirtyTracking<T>(fn: () => Promise<T>): Promise<T> 
  * server and would resurrect on the next pull.
  */
 db.projects.hook('creating', (_pk, obj) => {
-  if (suppressDirtyTracking) return;
+  const row = obj as unknown as Record<string, unknown>;
+  if (row[FROM_SERVER]) {
+    delete row[FROM_SERVER];
+    return;
+  }
   obj.syncStatus = 'pending';
   if (!obj.updatedAt) obj.updatedAt = new Date().toISOString();
 });
 
 db.projects.hook('updating', (mods) => {
-  if (suppressDirtyTracking) return;
+  const changes = mods as Partial<Project> & Record<string, unknown>;
 
-  const changes = mods as Partial<Project>;
+  // Server-originated: drop the marker, change nothing else.
+  if (changes[FROM_SERVER]) return { [FROM_SERVER]: undefined };
+
   // A write that only flips syncStatus is bookkeeping, not a user edit.
   const keys = Object.keys(changes);
   if (keys.length === 1 && keys[0] === 'syncStatus') return;

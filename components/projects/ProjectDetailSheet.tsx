@@ -15,8 +15,16 @@ import {
   STATUS_COLORS,
   PROJECT_TYPE_LABELS,
   LINK_FIELDS,
+  STATUS_LABELS,
+  PRIORITY_LABELS,
+  PHASE_FIELDS,
+  PHASE_STATUS_LABELS,
+  DOCUMENT_FIELDS,
+  pendingAmount,
+  hasPhaseData,
 } from '@/lib/types';
 import { formatDate, formatRelativeDate, getDueDateLabel, getProgressColor, isProjectComplete, cn } from '@/lib/utils';
+import { FileText, Phone, User } from 'lucide-react';
 
 interface ProjectDetailSheetProps {
   open: boolean;
@@ -40,7 +48,7 @@ export function ProjectDetailSheet({ open, onClose, onEdit, project }: ProjectDe
 
   if (!project) return null;
 
-  const { label: dueLabel, color: dueColor } = getDueDateLabel(project.dueDate);
+  const { label: dueLabel, color: dueColor } = getDueDateLabel(project.expectedEndDate ?? project.dueDate);
   const progressColor = getProgressColor(project.progress);
   const complete = isProjectComplete(project.progress, project.status);
 
@@ -49,8 +57,30 @@ export function ProjectDetailSheet({ open, onClose, onEdit, project }: ProjectDe
     value: (project.links?.[field.key] ?? '').trim(),
   })).filter((l) => l.value.length > 0);
 
+  const documents = DOCUMENT_FIELDS.map((f) => ({
+    ...f,
+    url: (project.documents?.[f.key]?.url ?? '').trim(),
+  })).filter((d) => d.url.length > 0);
+
+  const team = project.team;
+  const teamRows = [
+    { label: 'Project Manager', value: team?.projectManager },
+    { label: 'Team Lead', value: team?.teamLead },
+    { label: 'QA', value: team?.qa },
+    { label: 'Developers', value: team?.developers?.join(', ') },
+    { label: 'Designers', value: team?.designers?.join(', ') },
+  ].filter((r) => r.value);
+
+  const budget = project.budget;
+  const outstanding = budget ? pendingAmount(budget) : null;
+  const hasBudget = !!budget && (budget.estimated != null || budget.final != null || budget.received != null);
+
+  const money = (n: number | null | undefined) =>
+    n == null ? '—' : n.toLocaleString(undefined, { maximumFractionDigits: 2 });
+
   const dates = [
     { label: 'Start', value: project.startDate ? formatDate(project.startDate) : null },
+    { label: 'Estimated End', value: project.expectedEndDate ? formatDate(project.expectedEndDate) : null },
     { label: 'Due', value: project.dueDate ? formatDate(project.dueDate) : null },
   ].filter((d) => d.value);
 
@@ -99,7 +129,7 @@ export function ProjectDetailSheet({ open, onClose, onEdit, project }: ProjectDe
                   STATUS_COLORS[project.status]
                 )}
               >
-                {project.status.toUpperCase()}
+                {STATUS_LABELS[project.status]}
               </span>
               <span
                 className={cn(
@@ -107,7 +137,7 @@ export function ProjectDetailSheet({ open, onClose, onEdit, project }: ProjectDe
                   PRIORITY_COLORS[project.priority]
                 )}
               >
-                {project.priority}
+                {PRIORITY_LABELS[project.priority]}
               </span>
               <span
                 className="text-[10px] px-2 py-0.5 rounded-full font-medium"
@@ -288,6 +318,184 @@ export function ProjectDetailSheet({ open, onClose, onEdit, project }: ProjectDe
                   >
                     {project.notes}
                   </p>
+                </Section>
+              )}
+
+              {/* Phases — only when they've actually been used. There's no phase
+                  editor in the form, so an untouched project would otherwise show
+                  four empty rows. */}
+              {hasPhaseData(project.phases) && (
+              <Section title="Phases">
+                <div className="space-y-2.5">
+                  {PHASE_FIELDS.map(({ key, label }) => {
+                    const phase = project.phases?.[key];
+                    const pct = phase?.progress ?? 0;
+                    const done = phase?.status === 'completed';
+                    const blocked = phase?.status === 'blocked';
+                    const color = blocked ? 'var(--danger)' : done ? '#10B981' : 'var(--primary)';
+                    return (
+                      <div key={key}>
+                        <div className="flex items-center justify-between text-xs mb-1">
+                          <span style={{ color: 'var(--foreground)' }}>{label}</span>
+                          <span style={{ color: 'var(--muted)' }}>
+                            {PHASE_STATUS_LABELS[phase?.status ?? 'not-started']} · {pct}%
+                          </span>
+                        </div>
+                        <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--muted-bg)' }}>
+                          <div className="h-full rounded-full" style={{ width: `${pct}%`, background: color }} />
+                        </div>
+                        {phase?.notes && (
+                          <p className="mt-1 text-[11px]" style={{ color: 'var(--muted)' }}>
+                            {phase.notes}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </Section>
+              )}
+
+              {(project.pocName || project.pocPhone) && (
+                <Section title="Point of Contact">
+                  <div className="space-y-1.5 text-sm">
+                    {project.pocName && (
+                      <p className="flex items-center gap-2" style={{ color: 'var(--foreground)' }}>
+                        <User size={13} style={{ color: 'var(--muted)' }} />
+                        {project.pocName}
+                      </p>
+                    )}
+                    {project.pocPhone && (
+                      <a
+                        href={`tel:${project.pocPhone}`}
+                        className="flex items-center gap-2"
+                        style={{ color: 'var(--primary)' }}
+                      >
+                        <Phone size={13} />
+                        {project.pocPhone}
+                      </a>
+                    )}
+                  </div>
+                </Section>
+              )}
+
+              {(project.clientCompany || project.clientGst || project.clientAddress || project.clientWebsite || project.clientNotes) && (
+                <Section title="Client">
+                  <div className="space-y-1.5 text-sm" style={{ color: 'var(--foreground)' }}>
+                    {project.clientCompany && <p>{project.clientCompany}</p>}
+                    {project.clientGst && (
+                      <p className="text-xs" style={{ color: 'var(--muted)' }}>GST {project.clientGst}</p>
+                    )}
+                    {project.clientWebsite && (
+                      <a href={project.clientWebsite} target="_blank" rel="noreferrer noopener" style={{ color: 'var(--primary)' }}>
+                        {project.clientWebsite}
+                      </a>
+                    )}
+                    {project.clientAddress && (
+                      <p className="text-xs whitespace-pre-wrap" style={{ color: 'var(--muted)' }}>{project.clientAddress}</p>
+                    )}
+                    {project.clientNotes && (
+                      <p className="text-xs whitespace-pre-wrap" style={{ color: 'var(--muted)' }}>{project.clientNotes}</p>
+                    )}
+                  </div>
+                </Section>
+              )}
+
+              {teamRows.length > 0 && (
+                <Section title="Team">
+                  <div className="space-y-1.5">
+                    {teamRows.map(({ label, value }) => (
+                      <div key={label} className="flex justify-between gap-3 text-sm">
+                        <span style={{ color: 'var(--muted)' }}>{label}</span>
+                        <span className="text-right" style={{ color: 'var(--foreground)' }}>{value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </Section>
+              )}
+
+              {documents.length > 0 && (
+                <Section title="Documents">
+                  <div className="space-y-2">
+                    {documents.map(({ key, label, url }) => (
+                      <a
+                        key={key}
+                        href={url}
+                        target="_blank"
+                        rel="noreferrer noopener"
+                        className="flex items-center gap-3 rounded-xl p-2 -mx-2"
+                      >
+                        <span
+                          className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+                          style={{ background: 'var(--muted-bg)' }}
+                        >
+                          <FileText size={16} style={{ color: 'var(--muted)' }} />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-sm font-medium" style={{ color: 'var(--foreground)' }}>{label}</span>
+                          <span className="block text-xs truncate" style={{ color: 'var(--muted)' }}>{url}</span>
+                        </span>
+                        <ExternalLink size={14} className="flex-shrink-0" style={{ color: 'var(--muted)' }} />
+                      </a>
+                    ))}
+                  </div>
+                </Section>
+              )}
+
+              {hasBudget && (
+                <Section title="Budget">
+                  <div className="space-y-1.5 text-sm">
+                    {[
+                      { label: 'Estimated', value: money(budget?.estimated) },
+                      { label: 'Final', value: money(budget?.final) },
+                      { label: 'Received', value: money(budget?.received) },
+                    ].map(({ label, value }) => (
+                      <div key={label} className="flex justify-between">
+                        <span style={{ color: 'var(--muted)' }}>{label}</span>
+                        <span style={{ color: 'var(--foreground)' }}>{value}</span>
+                      </div>
+                    ))}
+                    <div className="flex justify-between pt-1.5 border-t" style={{ borderColor: 'var(--border)' }}>
+                      <span style={{ color: 'var(--muted)' }}>Pending</span>
+                      <span className="font-semibold" style={{ color: outstanding && outstanding > 0 ? 'var(--warning)' : '#10B981' }}>
+                        {money(outstanding)}
+                      </span>
+                    </div>
+                  </div>
+                </Section>
+              )}
+
+              {(project.requirements || project.deliverables) && (
+                <Section title="Scope">
+                  {project.requirements && (
+                    <div>
+                      <p className="text-[11px] mb-1" style={{ color: 'var(--muted)' }}>Requirements</p>
+                      <p className="text-sm whitespace-pre-wrap" style={{ color: 'var(--foreground)' }}>{project.requirements}</p>
+                    </div>
+                  )}
+                  {project.deliverables && (
+                    <div>
+                      <p className="text-[11px] mb-1" style={{ color: 'var(--muted)' }}>Deliverables</p>
+                      <p className="text-sm whitespace-pre-wrap" style={{ color: 'var(--foreground)' }}>{project.deliverables}</p>
+                    </div>
+                  )}
+                </Section>
+              )}
+
+              {(project.internalNotes || project.meetingNotes) && (
+                <Section title="More Notes">
+                  {project.internalNotes && (
+                    <div>
+                      <p className="text-[11px] mb-1" style={{ color: 'var(--muted)' }}>Internal</p>
+                      <p className="text-sm whitespace-pre-wrap" style={{ color: 'var(--foreground)' }}>{project.internalNotes}</p>
+                    </div>
+                  )}
+                  {project.meetingNotes && (
+                    <div>
+                      <p className="text-[11px] mb-1" style={{ color: 'var(--muted)' }}>Meetings</p>
+                      <p className="text-sm whitespace-pre-wrap" style={{ color: 'var(--foreground)' }}>{project.meetingNotes}</p>
+                    </div>
+                  )}
                 </Section>
               )}
 

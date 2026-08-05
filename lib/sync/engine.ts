@@ -1,4 +1,4 @@
-import { db, withoutDirtyTracking } from '@/lib/db/dexie';
+import { db, fromServer } from '@/lib/db/dexie';
 import { supabase } from '@/lib/supabase/client';
 import { useProjectStore } from '@/lib/store/useProjectStore';
 import type { Project } from '@/lib/types';
@@ -50,9 +50,18 @@ async function push(userId: string): Promise<number> {
 
     if (error) throw new Error(`push failed: ${error.message}`);
 
-    // Marking them clean must not re-mark them dirty.
-    await withoutDirtyTracking(async () => {
-      await db.projects.bulkPut(chunk.map((p) => ({ ...p, syncStatus: 'synced' as const })));
+    // Mark clean per row, and only if it hasn't changed since the snapshot was
+    // taken above — an edit made during the upload must stay pending rather
+    // than be overwritten by the stale copy we just sent. A write whose only
+    // key is syncStatus is short-circuited by the Dexie hook, so this can't
+    // re-dirty anything.
+    await db.transaction('rw', db.projects, async () => {
+      for (const p of chunk) {
+        const current = await db.projects.get(p.id);
+        if (current?.updatedAt === p.updatedAt) {
+          await db.projects.update(p.id, { syncStatus: 'synced' });
+        }
+      }
     });
     pushed += chunk.length;
   }
@@ -102,9 +111,7 @@ async function pull(userId: string): Promise<number> {
   }
 
   if (incoming.length) {
-    await withoutDirtyTracking(async () => {
-      await db.projects.bulkPut(incoming);
-    });
+    await db.projects.bulkPut(fromServer(incoming));
   }
 
   setWatermark(userId, newest);
@@ -141,8 +148,10 @@ export async function claimLocalRows(): Promise<number> {
   const orphans = await db.projects.where('syncStatus').notEqual('pending').toArray();
   if (orphans.length === 0) return 0;
 
-  await withoutDirtyTracking(async () => {
-    await db.projects.bulkPut(orphans.map((p) => ({ ...p, syncStatus: 'pending' as const })));
+  await db.transaction('rw', db.projects, async () => {
+    for (const p of orphans) {
+      await db.projects.update(p.id, { syncStatus: 'pending' });
+    }
   });
   return orphans.length;
 }

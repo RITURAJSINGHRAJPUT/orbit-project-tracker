@@ -3,7 +3,10 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MoreVertical, Edit2, Trash2, Copy, Archive } from 'lucide-react';
-import { Project, PRIORITY_COLORS, STATUS_COLORS, PROJECT_TYPE_LABELS } from '@/lib/types';
+import {
+  Project, PRIORITY_COLORS, STATUS_COLORS, PROJECT_TYPE_LABELS,
+  STATUS_LABELS, PRIORITY_LABELS,
+} from '@/lib/types';
 import { formatRelativeDate, getDueDateLabel, getProgressColor, isProjectComplete, cn } from '@/lib/utils';
 import { useProjectStore } from '@/lib/store/useProjectStore';
 import { toast } from 'sonner';
@@ -20,9 +23,13 @@ interface ProjectCardProps {
 export function ProjectCard({ project, index = 0, onView, onEdit }: ProjectCardProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const { deleteProject, duplicateProject, archiveProject, restoreProject } = useProjectStore();
-  const { label: dueLabel, color: dueColor } = getDueDateLabel(project.dueDate);
+  // expectedEndDate is the only end date the form sets now; dueDate stays on the
+  // model for existing and synced rows, so prefer it only as a fallback.
+  const { label: dueLabel, color: dueColor } = getDueDateLabel(
+    project.expectedEndDate ?? project.dueDate
+  );
 
-  const priorityLabel = project.priority.toUpperCase();
+  const priorityLabel = PRIORITY_LABELS[project.priority];
   const progressColor = getProgressColor(project.progress);
   const complete = isProjectComplete(project.progress, project.status);
 
@@ -72,9 +79,9 @@ export function ProjectCard({ project, index = 0, onView, onEdit }: ProjectCardP
           >
             {project.title}
           </h3>
-          {project.client && (
+          {(project.client || project.pocName) && (
             <p className="text-xs mt-0.5 truncate" style={{ color: 'var(--muted)' }}>
-              {project.client}
+              {[project.client, project.pocName].filter(Boolean).join(' · ')}
             </p>
           )}
         </div>
@@ -146,7 +153,7 @@ export function ProjectCard({ project, index = 0, onView, onEdit }: ProjectCardP
         <span
           className={cn('text-[10px] px-2 py-0.5 rounded-full font-medium', STATUS_COLORS[project.status])}
         >
-          {project.status.toUpperCase()}
+          {STATUS_LABELS[project.status]}
         </span>
         <span
           className="text-[10px] px-2 py-0.5 rounded-full font-medium"

@@ -15,6 +15,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     // Load projects from IndexedDB on mount (once)
     useProjectStore.getState().loadProjects();
 
+    // Ask the browser to treat our IndexedDB as persistent. Without a grant it's
+    // "best-effort" storage the browser may evict under disk pressure — which,
+    // for the only copy of your projects, means permanent loss rather than a
+    // re-sync. Fire-and-forget: a denial changes nothing about how the app runs.
+    void navigator.storage?.persist?.().catch(() => {});
+
     // Sync sets up its own auth + online listeners and is a no-op when
     // Supabase isn't configured. Deliberately not awaited: the splash is gated
     // on the local read only, never on the network.
