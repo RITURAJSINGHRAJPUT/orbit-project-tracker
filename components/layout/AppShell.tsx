@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { BottomNav } from './BottomNav';
 import { useProjectStore } from '@/lib/store/useProjectStore';
+import { useTimeEntryStore } from '@/lib/store/useTimeEntryStore';
 import { useSyncStore } from '@/lib/sync/useSyncStore';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -14,6 +15,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
     // Load projects from IndexedDB on mount (once)
     useProjectStore.getState().loadProjects();
+
+    // Time entries load alongside, but the splash gate stays on projects only —
+    // an empty entry table must never delay first paint.
+    void useTimeEntryStore.getState().loadEntries();
 
     // Ask the browser to treat our IndexedDB as persistent. Without a grant it's
     // "best-effort" storage the browser may evict under disk pressure — which,

@@ -1,4 +1,5 @@
 import Dexie, { Table } from 'dexie';
+import type { TimeEntry } from '@/lib/types';
 import {
   Project,
   ProjectStatus,
@@ -22,8 +23,16 @@ export const V1_STATUS_MIGRATION: Record<string, ProjectStatus> = {
   archived: 'archived',
 };
 
+/**
+ * Time entries index on what the module actually queries — the month view and
+ * the sync outbox. Deliberately NOT the projects INDEXES const: different
+ * entity, different access patterns.
+ */
+const TIME_ENTRY_INDEXES = 'id, date, projectId, status, updatedAt, syncStatus, deletedAt';
+
 export class OrbitDB extends Dexie {
   projects!: Table<Project, string>;
+  timeEntries!: Table<TimeEntry, string>;
 
   constructor() {
     super('OrbitDB');
@@ -84,6 +93,24 @@ export class OrbitDB extends Dexie {
             p.syncStatus = 'pending';
           })
       );
+
+    /**
+     * v3 — the Extra Working Hours module.
+     *
+     * `stores()` is a delta spec: tables not named in a version carry forward
+     * unchanged, so `projects` is untouched here and a pure table add needs no
+     * `.upgrade()` callback.
+     */
+    this.version(3).stores({ timeEntries: TIME_ENTRY_INDEXES });
+
+    /**
+     * v3 — the Extra Working Hours module.
+     *
+     * `stores()` is a delta spec: tables not named in a version carry forward
+     * unchanged, so projects is untouched and a pure table add needs no
+     * `.upgrade()` callback.
+     */
+    this.version(3).stores({ timeEntries: TIME_ENTRY_INDEXES });
   }
 }
 
@@ -111,39 +138,53 @@ export function fromServer<T extends object>(rows: T[]): T[] {
 }
 
 /**
- * Dirty tracking lives here rather than in the store because there are nine
- * separate write paths — six store actions plus `db.projects.bulkPut()` and
- * `db.projects.clear()` in the settings page, which bypass the store entirely.
- * A hook catches all of them in one place.
+ * Dirty tracking lives here rather than in the stores because there are many
+ * write paths — the store actions plus `bulkPut()` and `clear()` in the
+ * settings page, which bypass the stores entirely. A hook catches all of them
+ * in one place.
  *
- * It also fixes two defects the store had: `deleteProject` and `restoreProject`
- * wrote only `deletedAt` and never set `syncStatus`, so a `syncStatus`-based
- * outbox missed every delete and every restore — deletions never reached the
- * server and would resurrect on the next pull.
+ * It also fixes two defects the project store had: `deleteProject` and
+ * `restoreProject` write only `deletedAt` and never set `syncStatus`, so a
+ * `syncStatus`-based outbox missed every delete and every restore — deletions
+ * never reached the server and would resurrect on the next pull.
+ *
+ * Dexie hooks are registered per TABLE, not per database: there is no
+ * db-wide write hook. A new table with no `registerSyncHooks` call gets no
+ * dirty tracking at all, `push()` finds nothing, and every write to it is
+ * silently never uploaded. That is why this is a named helper rather than
+ * inline code to copy.
  */
-db.projects.hook('creating', (_pk, obj) => {
-  const row = obj as unknown as Record<string, unknown>;
-  if (row[FROM_SERVER]) {
-    delete row[FROM_SERVER];
-    return;
-  }
-  obj.syncStatus = 'pending';
-  if (!obj.updatedAt) obj.updatedAt = new Date().toISOString();
-});
+function registerSyncHooks<T extends { updatedAt: string; syncStatus: string }>(
+  table: Table<T, string>
+) {
+  table.hook('creating', (_pk, obj) => {
+    const row = obj as unknown as Record<string, unknown>;
+    if (row[FROM_SERVER]) {
+      delete row[FROM_SERVER];
+      return;
+    }
+    obj.syncStatus = 'pending';
+    if (!obj.updatedAt) obj.updatedAt = new Date().toISOString();
+  });
 
-db.projects.hook('updating', (mods) => {
-  const changes = mods as Partial<Project> & Record<string, unknown>;
+  table.hook('updating', (mods) => {
+    const changes = mods as Partial<T> & Record<string, unknown>;
 
-  // Server-originated: drop the marker, change nothing else.
-  if (changes[FROM_SERVER]) return { [FROM_SERVER]: undefined };
+    // Server-originated: drop the marker, change nothing else.
+    if (changes[FROM_SERVER]) return { [FROM_SERVER]: undefined };
 
-  // A write that only flips syncStatus is bookkeeping, not a user edit.
-  const keys = Object.keys(changes);
-  if (keys.length === 1 && keys[0] === 'syncStatus') return;
+    // A write that only flips syncStatus is bookkeeping, not a user edit.
+    // push() relies on this to mark rows clean without re-dirtying them.
+    const keys = Object.keys(changes);
+    if (keys.length === 1 && keys[0] === 'syncStatus') return;
 
-  return {
-    ...changes,
-    updatedAt: changes.updatedAt ?? new Date().toISOString(),
-    syncStatus: 'pending' as const,
-  };
-});
+    return {
+      ...changes,
+      updatedAt: (changes.updatedAt as string | undefined) ?? new Date().toISOString(),
+      syncStatus: 'pending' as const,
+    };
+  });
+}
+
+registerSyncHooks(db.projects);
+registerSyncHooks(db.timeEntries);

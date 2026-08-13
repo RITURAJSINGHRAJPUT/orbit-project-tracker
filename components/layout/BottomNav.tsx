@@ -2,12 +2,14 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { FolderKanban, BarChart3, Settings } from 'lucide-react';
+import { FolderKanban, BarChart3, Clock, Settings } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const NAV_ITEMS = [
   { href: '/projects', label: 'Projects', icon: FolderKanban },
   { href: '/dashboard', label: 'Dashboard', icon: BarChart3 },
+  // 'startsWith' matching, so this must not prefix-collide with another route.
+  { href: '/extra-hours', label: 'Extra Hrs', icon: Clock },
   { href: '/settings', label: 'Settings', icon: Settings },
 ];
 

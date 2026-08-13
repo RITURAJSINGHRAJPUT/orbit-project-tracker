@@ -97,3 +97,49 @@ create policy "own rows" on public.projects
   to authenticated
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Extra Working Hours
+--
+-- Kept in step with supabase/migrations/003_time_entries.sql, which is what
+-- migrates a LIVE database — the `create table if not exists` above means
+-- re-running this file never alters an existing one. See that migration for the
+-- reasoning behind each convention.
+-- ─────────────────────────────────────────────────────────────────────────────
+
+create table if not exists public.time_entries (
+  id          uuid primary key,                    -- client-generated
+  user_id     uuid not null references auth.users (id) on delete cascade,
+
+  entry_date  date not null,
+  project_id  uuid,                                -- deliberately not an FK
+
+  work_type   text not null default 'development'
+              check (work_type in ('development', 'meeting', 'support', 'deployment', 'other')),
+
+  start_time  time,
+  end_time    time,
+  minutes     integer not null default 0 check (minutes >= 0),
+
+  reason      text not null default '',
+  status      text not null default 'pending'
+              check (status in ('pending', 'approved', 'rejected')),
+
+  created_at  timestamptz not null,
+  updated_at  timestamptz not null,                -- client-authoritative, NO trigger
+  deleted_at  timestamptz
+);
+
+create index if not exists time_entries_user_updated_idx
+  on public.time_entries (user_id, updated_at desc);
+create index if not exists time_entries_user_date_idx
+  on public.time_entries (user_id, entry_date desc);
+
+alter table public.time_entries enable row level security;
+
+drop policy if exists "own rows" on public.time_entries;
+create policy "own rows" on public.time_entries
+  for all
+  to authenticated
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);

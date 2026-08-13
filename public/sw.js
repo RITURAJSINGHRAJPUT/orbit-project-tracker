@@ -8,7 +8,7 @@
 //
 // Registered in production only — see components/layout/AppShell.tsx.
 
-const VERSION = 'v3';
+const VERSION = 'v4';
 const RUNTIME = `orbit-runtime-${VERSION}`; // HTML documents + RSC payloads
 const STATIC = `orbit-static-${VERSION}`; // immutable build output + brand assets
 
@@ -25,7 +25,7 @@ const STATIC_ASSETS = [
 ];
 
 // Documents worth having before the user navigates to them.
-const ROUTE_SHELLS = ['/projects', '/dashboard', '/settings'];
+const ROUTE_SHELLS = ['/projects', '/dashboard', '/extra-hours', '/settings'];
 
 // Last-resort response when nothing at all is cached. Deliberately a self
 // contained string rather than a Next route: a real page would need its own JS

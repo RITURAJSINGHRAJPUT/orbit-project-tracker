@@ -297,3 +297,86 @@ input, textarea, select {
 .stat-card-pending { border-left: 3px solid #F59E0B; }
 .stat-card-ongoing { border-left: 3px solid #06B6D4; }
 .stat-card-completed { border-left: 3px solid #10B981; }
+/* ── Print ──
+   Mandatory, not polish. The design is dark-first (--background: #0F172A), so
+   printing without this gives white-on-dark that browsers strip to near-blank
+   pages. Force the light tokens and hide everything interactive. */
+@media print {
+  :root {
+    --background: #ffffff;
+    --card: #ffffff;
+    --foreground: #000000;
+    --muted: #333333;
+    --muted-bg: #ffffff;
+    --border: #999999;
+    --primary: #000000;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  /* Chrome/Safari drop backgrounds by default; this keeps table rules visible. */
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    box-shadow: none !important;
+  }
+
+  nav,
+  .fab,
+  .orbit-no-print,
+  [data-slot='sheet-content'],
+  [data-slot='sheet-overlay'] {
+    display: none !important;
+  }
+
+  /* The app shell reserves space for the bottom nav, which isn't printed. */
+  main {
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  .orbit-card {
+    border: none !important;
+    background: #fff !important;
+  }
+
+  .orbit-print-sheet {
+    padding: 0 !important;
+  }
+
+  .orbit-print-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .orbit-print-table th,
+  .orbit-print-table td {
+    border: 1px solid #666;
+    padding: 4px 6px;
+    text-align: left;
+    /* Keep a row from splitting across a page break. */
+    page-break-inside: avoid;
+  }
+
+  .orbit-print-table th {
+    font-weight: 700;
+    background: #eee !important;
+  }
+
+  /* An empty cell still needs its box drawn, for signing by hand. */
+  .orbit-print-table td:empty::after {
+    content: '\00a0';
+  }
+
+  .orbit-print-signatures {
+    page-break-inside: avoid;
+  }
+
+  @page {
+    margin: 14mm;
+  }
+}

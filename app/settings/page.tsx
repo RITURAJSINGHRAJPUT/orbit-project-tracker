@@ -11,9 +11,11 @@ import { AppHeader } from '@/components/layout/AppHeader';
 import { Avatar } from '@/components/brand/Avatar';
 import { PROFILE } from '@/lib/profile';
 import { useProjectStore } from '@/lib/store/useProjectStore';
+import { useTimeEntryStore } from '@/lib/store/useTimeEntryStore';
+import { timeEntryRecordSchema } from '@/lib/sync/timeEntryMapper';
 import { toast } from 'sonner';
 import { db } from '@/lib/db/dexie';
-import type { Project } from '@/lib/types';
+import type { Project, TimeEntry } from '@/lib/types';
 import { projectRecordSchema, migrateLegacyProject } from '@/lib/sync/mapper';
 import { STATUS_GROUP } from '@/lib/types';
 import { isSupabaseConfigured } from '@/lib/supabase/client';
@@ -32,7 +34,18 @@ export default function SettingsPage() {
 
   const handleExport = () => {
     try {
-      const data = JSON.stringify({ version: '1.0', exportedAt: new Date().toISOString(), projects }, null, 2);
+      // v2.0 carries both entities. A v1.0 file has projects only and still
+      // imports — see handleImport.
+      const data = JSON.stringify(
+        {
+          version: '2.0',
+          exportedAt: new Date().toISOString(),
+          projects,
+          timeEntries: useTimeEntryStore.getState().entries,
+        },
+        null,
+        2
+      );
       const blob = new Blob([data], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -74,15 +87,29 @@ export default function SettingsPage() {
           else skipped += 1;
         }
 
-        if (valid.length === 0) throw new Error('No valid projects in file');
+        // Time entries are absent from v1.0 files, which is fine — treat a
+        // missing key as an empty list rather than a malformed backup.
+        const validEntries: TimeEntry[] = [];
+        for (const row of Array.isArray(data.timeEntries) ? data.timeEntries : []) {
+          const parsed = timeEntryRecordSchema.safeParse(row);
+          if (parsed.success) validEntries.push(parsed.data as TimeEntry);
+          else skipped += 1;
+        }
 
-        await db.projects.bulkPut(valid);
+        if (valid.length === 0 && validEntries.length === 0) {
+          throw new Error('Nothing importable in file');
+        }
+
+        if (valid.length) await db.projects.bulkPut(valid);
+        if (validEntries.length) await db.timeEntries.bulkPut(validEntries);
         await useProjectStore.getState().loadProjects();
-        toast.success(
-          skipped > 0
-            ? `Imported ${valid.length} projects (${skipped} skipped)`
-            : `Imported ${valid.length} projects!`
-        );
+        await useTimeEntryStore.getState().loadEntries();
+
+        const parts = [
+          valid.length ? `${valid.length} projects` : '',
+          validEntries.length ? `${validEntries.length} entries` : '',
+        ].filter(Boolean).join(' and ');
+        toast.success(skipped > 0 ? `Imported ${parts} (${skipped} skipped)` : `Imported ${parts}`);
       } catch {
         toast.error('Import failed. Please check the file format.');
       }
@@ -111,10 +138,14 @@ export default function SettingsPage() {
     }
   };
 
-  const handleClearData = () => {
-    if (!confirm('Are you sure you want to clear all projects? This cannot be undone.')) return;
-    db.projects.clear();
-    useProjectStore.getState().loadProjects();
+  const handleClearData = async () => {
+    if (!confirm('Are you sure you want to clear all projects and extra hours? This cannot be undone.')) return;
+    // Both tables — clearing projects alone would leave orphaned time entries.
+    await Promise.all([db.projects.clear(), db.timeEntries.clear()]);
+    await Promise.all([
+      useProjectStore.getState().loadProjects(),
+      useTimeEntryStore.getState().loadEntries(),
+    ]);
     toast.success('All data cleared.');
   };
 

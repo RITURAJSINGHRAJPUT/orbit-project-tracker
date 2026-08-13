@@ -432,3 +432,69 @@ export const hasPhaseData = (phases: ProjectPhases | undefined): boolean =>
     const p = phases[key];
     return !!p && (p.progress > 0 || p.status !== 'not-started' || !!p.startDate || !!p.notes);
   });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Extra Working Hours
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type WorkType = 'development' | 'meeting' | 'support' | 'deployment' | 'other';
+
+export type EntryStatus = 'pending' | 'approved' | 'rejected';
+
+export interface TimeEntry {
+  id: string;
+  /** 'YYYY-MM-DD' */
+  date: string;
+  /**
+   * Not a hard foreign key. A pull can deliver an entry before its project, so
+   * consumers must tolerate an id that doesn't resolve.
+   */
+  projectId: string | null;
+  workType: WorkType;
+  /** 'HH:MM', or null while a row is incomplete. */
+  startTime: string | null;
+  endTime: string | null;
+  /** Computed from start/end on save. Stored so lists and totals never recompute. */
+  minutes: number;
+  reason: string;
+  status: EntryStatus;
+
+  createdAt: string;
+  updatedAt: string;
+  syncStatus: 'synced' | 'pending' | 'conflict';
+  deletedAt: string | null;
+}
+
+export const WORK_TYPE_LABELS: Record<WorkType, string> = {
+  development: 'Development',
+  meeting: 'Meeting',
+  support: 'Support',
+  deployment: 'Deployment',
+  other: 'Other',
+};
+
+export const ENTRY_STATUS_LABELS: Record<EntryStatus, string> = {
+  pending: 'Pending',
+  approved: 'Approved',
+  rejected: 'Rejected',
+};
+
+export const ENTRY_STATUS_COLORS: Record<EntryStatus, string> = {
+  pending: 'text-yellow-400 bg-yellow-400/10',
+  approved: 'text-green-400 bg-green-400/10',
+  rejected: 'text-red-400 bg-red-400/10',
+};
+
+export const emptyTimeEntry = (): Omit<
+  TimeEntry,
+  'id' | 'createdAt' | 'updatedAt' | 'syncStatus' | 'deletedAt'
+> => ({
+  date: '',
+  projectId: null,
+  workType: 'development',
+  startTime: null,
+  endTime: null,
+  minutes: 0,
+  reason: '',
+  status: 'pending',
+});
