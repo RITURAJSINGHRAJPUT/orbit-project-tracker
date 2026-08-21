@@ -305,11 +305,11 @@ input, textarea, select {
   :root {
     --background: #ffffff;
     --card: #ffffff;
-    --foreground: #000000;
-    --muted: #333333;
+    --foreground: #0f172a;
+    --muted: #475569;
     --muted-bg: #ffffff;
-    --border: #999999;
-    --primary: #000000;
+    --border: #cbd5e1;
+    --primary: #2563eb;
   }
 
   html,
@@ -318,7 +318,8 @@ input, textarea, select {
     color: #000 !important;
   }
 
-  /* Chrome/Safari drop backgrounds by default; this keeps table rules visible. */
+  /* Chrome/Safari drop backgrounds by default; this keeps the colors and
+     table rules visible instead of printing a flattened grayscale page. */
   * {
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
@@ -344,8 +345,19 @@ input, textarea, select {
     background: #fff !important;
   }
 
+  /* Chrome/Edge only render the URL/date/title header and page-number
+     footer inside the @page margin. Zeroing it out leaves them no room to
+     draw, so they disappear without needing the print dialog's "Headers
+     and footers" checkbox — the sheet supplies its own margin instead. */
   .orbit-print-sheet {
-    padding: 0 !important;
+    padding: 12mm !important;
+  }
+
+  .orbit-print-header-bar {
+    height: 5px;
+    border-radius: 3px;
+    background: linear-gradient(90deg, #3b82f6, #2563eb) !important;
+    margin: 8px 0 16px;
   }
 
   .orbit-print-table {
@@ -355,8 +367,8 @@ input, textarea, select {
 
   .orbit-print-table th,
   .orbit-print-table td {
-    border: 1px solid #666;
-    padding: 4px 6px;
+    border: 1px solid #93c5fd;
+    padding: 5px 7px;
     text-align: left;
     /* Keep a row from splitting across a page break. */
     page-break-inside: avoid;
@@ -364,7 +376,17 @@ input, textarea, select {
 
   .orbit-print-table th {
     font-weight: 700;
-    background: #eee !important;
+    color: #fff !important;
+    background: #2563eb !important;
+    border-color: #2563eb !important;
+  }
+
+  .orbit-print-table tbody tr:nth-child(even) td {
+    background: #eff6ff !important;
+  }
+
+  .orbit-print-table tbody tr:nth-child(odd) td {
+    background: #ffffff !important;
   }
 
   /* An empty cell still needs its box drawn, for signing by hand. */
@@ -372,11 +394,15 @@ input, textarea, select {
     content: '\00a0';
   }
 
+  .orbit-print-total {
+    color: #059669 !important;
+  }
+
   .orbit-print-signatures {
     page-break-inside: avoid;
   }
 
   @page {
-    margin: 14mm;
+    margin: 0;
   }
 }

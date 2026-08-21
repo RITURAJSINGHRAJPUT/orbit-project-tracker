@@ -134,10 +134,11 @@ export default function ExtraHoursReportPage() {
           {profile.org && (
             <p className="text-xs" style={{ color: 'var(--muted)' }}>{profile.org}</p>
           )}
-          <p className="text-sm font-semibold tracking-wider uppercase" style={{ color: 'var(--muted)' }}>
+          <p className="text-sm font-semibold tracking-wider uppercase" style={{ color: 'var(--primary)' }}>
             Extra Working Hours
           </p>
           <p className="text-sm" style={{ color: 'var(--muted)' }}>{formatMonth(month)}</p>
+          <div className="orbit-print-header-bar" />
         </header>
 
         <table className="orbit-print-table w-full text-xs">
@@ -173,7 +174,10 @@ export default function ExtraHoursReportPage() {
 
         {!blank && (
           <p className="mt-3 text-sm font-semibold" style={{ color: 'var(--foreground)' }}>
-            Total Extra Hours: <span className="tabular-nums">{formatDuration(summary.totalMinutes)}</span>
+            Total Extra Hours:{' '}
+            <span className="orbit-print-total tabular-nums" style={{ color: 'var(--success)' }}>
+              {formatDuration(summary.totalMinutes)}
+            </span>
           </p>
         )}
 
