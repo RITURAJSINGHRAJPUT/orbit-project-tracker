@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Plus, ChevronLeft, ChevronRight, FileText, Clock } from 'lucide-react';
+import { Plus, ChevronLeft, ChevronRight, FileText, FileDown, Clock } from 'lucide-react';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { TimeEntrySheet } from '@/components/time/TimeEntrySheet';
 import { useTimeEntryStore } from '@/lib/store/useTimeEntryStore';
@@ -15,7 +15,7 @@ import {
   ENTRY_STATUS_COLORS,
 } from '@/lib/types';
 import { formatDuration, formatMonth, parseMonth, toMonthKey, weekdayOf } from '@/lib/time';
-import { PROFILE } from '@/lib/profile';
+import { useProfile } from '@/lib/profile';
 import { cn } from '@/lib/utils';
 
 const shiftMonth = (month: string, delta: number) => {
@@ -29,6 +29,7 @@ export default function ExtraHoursPage() {
   const projects = useProjectStore((s) => s.projects);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editing, setEditing] = useState<TimeEntry | null>(null);
+  const profile = useProfile();
 
   const entries = getMonthEntries();
   const summary = getMonthSummary();
@@ -55,7 +56,7 @@ export default function ExtraHoursPage() {
         style={{ paddingTop: 'env(safe-area-inset-top, 0px)', background: 'var(--background)' }}
       >
         <div className="px-3 pt-3">
-          <AppHeader title="Extra Hours" subtitle={PROFILE.name} />
+          <AppHeader title="Extra Hours" subtitle={profile.name} />
         </div>
 
         {/* Month switcher */}
@@ -109,15 +110,26 @@ export default function ExtraHoursPage() {
             ))}
           </div>
 
-          <Link
-            href={`/extra-hours/report?month=${month}`}
-            id="open-report"
-            className="mt-4 flex h-11 items-center justify-center gap-2 rounded-2xl text-sm font-semibold"
-            style={{ background: 'var(--muted-bg)', color: 'var(--primary)' }}
-          >
-            <FileText size={16} />
-            Export PDF / Print
-          </Link>
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            <Link
+              href={`/extra-hours/report?month=${month}`}
+              id="open-report"
+              className="flex h-11 items-center justify-center gap-2 rounded-2xl text-sm font-semibold"
+              style={{ background: 'var(--muted-bg)', color: 'var(--primary)' }}
+            >
+              <FileText size={16} />
+              Export PDF
+            </Link>
+            <Link
+              href={`/extra-hours/report?month=${month}&blank=1`}
+              id="download-blank-sheet"
+              className="flex h-11 items-center justify-center gap-2 rounded-2xl text-sm font-semibold"
+              style={{ background: 'var(--muted-bg)', color: 'var(--primary)' }}
+            >
+              <FileDown size={16} />
+              Blank Sheet
+            </Link>
+          </div>
         </div>
 
         {/* Entries — cards on phones, a table once there's room. A nine-column

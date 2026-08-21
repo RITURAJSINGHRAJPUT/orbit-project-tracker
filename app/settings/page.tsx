@@ -4,12 +4,13 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   Moon, Sun, Download, Upload, Bell, BellOff,
-  Info, MessageSquare, ChevronRight, Trash2,
+  Info, MessageSquare, ChevronRight, Trash2, Pencil,
 } from 'lucide-react';
 import { useTheme } from '@/components/providers/ThemeProvider';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { Avatar } from '@/components/brand/Avatar';
-import { PROFILE } from '@/lib/profile';
+import { useProfile, useProfileStore, type Profile } from '@/lib/profile';
+import { ProfileSheet } from '@/components/settings/ProfileSheet';
 import { useProjectStore } from '@/lib/store/useProjectStore';
 import { useTimeEntryStore } from '@/lib/store/useTimeEntryStore';
 import { timeEntryRecordSchema } from '@/lib/sync/timeEntryMapper';
@@ -29,17 +30,21 @@ export default function SettingsPage() {
   const { projects } = useProjectStore();
   const [notifications, setNotifications] = useState(false);
   const [signInOpen, setSignInOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const profile = useProfile();
   const { session, authReady, state: syncState, lastSyncedAt, pendingCount, sync, signOut } =
     useSyncStore();
 
   const handleExport = () => {
     try {
-      // v2.0 carries both entities. A v1.0 file has projects only and still
-      // imports — see handleImport.
+      // v2.1 adds the profile; v2.0 carries both entities; a v1.0 file has
+      // projects only. All three still import — see handleImport, which
+      // branches on which keys are present rather than on this string.
       const data = JSON.stringify(
         {
-          version: '2.0',
+          version: '2.1',
           exportedAt: new Date().toISOString(),
+          profile: useProfileStore.getState().profile,
           projects,
           timeEntries: useTimeEntryStore.getState().entries,
         },
@@ -96,8 +101,25 @@ export default function SettingsPage() {
           else skipped += 1;
         }
 
-        if (valid.length === 0 && validEntries.length === 0) {
+        // Absent from v1.0/v2.0 files. Only the two strings are taken, and only
+        // if they're actually strings — a junk value here would otherwise render
+        // as "[object Object]" in the header with no way to tell where it came
+        // from. A blank name is rejected for the same reason the sheet rejects it.
+        const importedProfile = data.profile;
+        const profilePatch: Partial<Profile> = {};
+        if (typeof importedProfile?.name === 'string' && importedProfile.name.trim()) {
+          profilePatch.name = importedProfile.name.trim();
+        }
+        if (typeof importedProfile?.org === 'string') {
+          profilePatch.org = importedProfile.org.trim();
+        }
+
+        if (valid.length === 0 && validEntries.length === 0 && !Object.keys(profilePatch).length) {
           throw new Error('Nothing importable in file');
+        }
+
+        if (Object.keys(profilePatch).length) {
+          useProfileStore.getState().setProfile(profilePatch);
         }
 
         if (valid.length) await db.projects.bulkPut(valid);
@@ -108,6 +130,7 @@ export default function SettingsPage() {
         const parts = [
           valid.length ? `${valid.length} projects` : '',
           validEntries.length ? `${validEntries.length} entries` : '',
+          Object.keys(profilePatch).length ? 'profile' : '',
         ].filter(Boolean).join(' and ');
         toast.success(skipped > 0 ? `Imported ${parts} (${skipped} skipped)` : `Imported ${parts}`);
       } catch {
@@ -172,17 +195,30 @@ export default function SettingsPage() {
             animate={{ opacity: 1, y: 0 }}
             className="orbit-card p-4"
           >
-            <div className="flex items-center gap-3">
+            {/* Only the identity row is interactive — the stats below it aren't. */}
+            <button
+              id="edit-profile"
+              onClick={() => setProfileOpen(true)}
+              className="flex w-full items-center gap-3 text-left"
+            >
               <Avatar size={48} />
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <p className="font-semibold truncate" style={{ color: 'var(--foreground)' }}>
-                  {PROFILE.name}
+                  {profile.name}
                 </p>
                 <p className="text-xs truncate" style={{ color: 'var(--muted)' }}>
-                  {PROFILE.org}
+                  {profile.org || 'Tap to add an organisation'}
                 </p>
               </div>
-            </div>
+              <span
+                className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl"
+                style={{ background: 'var(--muted-bg)' }}
+                aria-hidden="true"
+              >
+                <Pencil size={15} style={{ color: 'var(--muted)' }} />
+              </span>
+              <span className="sr-only">Edit profile</span>
+            </button>
             <div
               className="mt-4 pt-4 border-t grid grid-cols-3 text-center"
               style={{ borderColor: 'var(--border)' }}
@@ -388,6 +424,7 @@ export default function SettingsPage() {
         <div className="h-2" />
       </div>
 
+      <ProfileSheet open={profileOpen} onClose={() => setProfileOpen(false)} />
       <SignInSheet open={signInOpen} onClose={() => setSignInOpen(false)} />
     </div>
   );

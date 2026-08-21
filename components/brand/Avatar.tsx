@@ -1,12 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { PROFILE, profileInitials } from '@/lib/profile';
+import { profileInitials, useProfile } from '@/lib/profile';
 
 interface AvatarProps {
   /** Rendered size in CSS pixels. */
   size?: number;
   className?: string;
+  /** Overrides the stored profile — used for the live preview while editing. */
+  name?: string;
 }
 
 /**
@@ -19,8 +21,10 @@ interface AvatarProps {
  * covered by the worker's cache-first rule. The source is pre-sized to 192px by
  * scripts/generate-icons.mjs, so there's nothing for the optimizer to do.
  */
-export function Avatar({ size = 36, className }: AvatarProps) {
+export function Avatar({ size = 36, className, name }: AvatarProps) {
   const [failed, setFailed] = useState(false);
+  const profile = useProfile();
+  const displayName = name ?? profile.name;
 
   const shared = {
     width: size,
@@ -45,7 +49,7 @@ export function Avatar({ size = 36, className }: AvatarProps) {
           fontWeight: 600,
         }}
       >
-        {profileInitials()}
+        {profileInitials(displayName)}
       </span>
     );
   }
@@ -57,7 +61,7 @@ export function Avatar({ size = 36, className }: AvatarProps) {
     // eslint-disable-next-line @next/next/no-img-element
     <img
       src="/avatar-192.jpg"
-      alt={PROFILE.name}
+      alt={displayName}
       width={size}
       height={size}
       loading="eager"

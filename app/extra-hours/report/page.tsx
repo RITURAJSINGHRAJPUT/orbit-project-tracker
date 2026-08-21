@@ -6,7 +6,7 @@ import { ArrowLeft, Printer } from 'lucide-react';
 import { useTimeEntryStore } from '@/lib/store/useTimeEntryStore';
 import { useProjectStore } from '@/lib/store/useProjectStore';
 import { formatDuration, formatMonth, monthDays, toMonthKey, weekdayOf } from '@/lib/time';
-import { PROFILE } from '@/lib/profile';
+import { useProfile } from '@/lib/profile';
 
 /**
  * The printable monthly sheet.
@@ -22,14 +22,18 @@ export default function ExtraHoursReportPage() {
   const projects = useProjectStore((s) => s.projects);
 
   const [month, setMonth] = useState(storeMonth);
+  const [blank, setBlank] = useState(false);
   const [includeBlankDays, setIncludeBlankDays] = useState(false);
   const [includeSignatures, setIncludeSignatures] = useState(true);
+  const profile = useProfile();
 
-  // Read ?month= without useSearchParams, which would force a Suspense boundary
-  // on an otherwise static route.
+  // Read ?month= and ?blank= without useSearchParams, which would force a
+  // Suspense boundary on an otherwise static route.
   useEffect(() => {
-    const q = new URLSearchParams(window.location.search).get('month');
+    const params = new URLSearchParams(window.location.search);
+    const q = params.get('month');
     setMonth(q && /^\d{4}-\d{2}$/.test(q) ? q : storeMonth || toMonthKey());
+    setBlank(params.get('blank') === '1');
   }, [storeMonth]);
 
   const entries = getMonthEntries(month);
@@ -39,9 +43,14 @@ export default function ExtraHoursReportPage() {
     id ? (projects.find((p) => p.id === id)?.title ?? 'Unknown project') : '';
 
   const byDate = new Map(entries.map((e) => [e.date, e] as const));
-  const rows = includeBlankDays
-    ? monthDays(month).map((d) => ({ date: d.date, weekday: d.weekday, entry: byDate.get(d.date) ?? null }))
-    : entries.map((e) => ({ date: e.date, weekday: weekdayOf(e.date), entry: e }));
+  const rows =
+    blank || includeBlankDays
+      ? monthDays(month).map((d) => ({
+          date: d.date,
+          weekday: d.weekday,
+          entry: blank ? null : (byDate.get(d.date) ?? null),
+        }))
+      : entries.map((e) => ({ date: e.date, weekday: weekdayOf(e.date), entry: e }));
 
   return (
     <div className="min-h-full" style={{ background: 'var(--background)' }}>
@@ -57,7 +66,7 @@ export default function ExtraHoursReportPage() {
             <ArrowLeft size={18} />
           </Link>
           <h1 className="text-lg font-bold" style={{ color: 'var(--foreground)' }}>
-            Report preview
+            {blank ? 'Blank sheet preview' : 'Report preview'}
           </h1>
         </div>
 
@@ -73,15 +82,31 @@ export default function ExtraHoursReportPage() {
             />
           </label>
 
-          {[
-            { label: 'Include blank days', value: includeBlankDays, set: setIncludeBlankDays },
-            { label: 'Include signature fields', value: includeSignatures, set: setIncludeSignatures },
-          ].map(({ label, value, set }) => (
-            <label key={label} className="flex items-center justify-between py-1">
-              <span className="text-sm" style={{ color: 'var(--foreground)' }}>{label}</span>
-              <input type="checkbox" checked={value} onChange={(e) => set(e.target.checked)} className="h-5 w-5" />
+          {!blank && (
+            <>
+              {[
+                { label: 'Include blank days', value: includeBlankDays, set: setIncludeBlankDays },
+                { label: 'Include signature fields', value: includeSignatures, set: setIncludeSignatures },
+              ].map(({ label, value, set }) => (
+                <label key={label} className="flex items-center justify-between py-1">
+                  <span className="text-sm" style={{ color: 'var(--foreground)' }}>{label}</span>
+                  <input type="checkbox" checked={value} onChange={(e) => set(e.target.checked)} className="h-5 w-5" />
+                </label>
+              ))}
+            </>
+          )}
+
+          {blank && (
+            <label className="flex items-center justify-between py-1">
+              <span className="text-sm" style={{ color: 'var(--foreground)' }}>Include signature fields</span>
+              <input
+                type="checkbox"
+                checked={includeSignatures}
+                onChange={(e) => setIncludeSignatures(e.target.checked)}
+                className="h-5 w-5"
+              />
             </label>
-          ))}
+          )}
 
           <button
             id="print-report"
@@ -105,7 +130,10 @@ export default function ExtraHoursReportPage() {
       {/* The sheet itself */}
       <div className="orbit-print-sheet px-4 pb-8">
         <header className="text-center mb-4">
-          <h2 className="text-lg font-bold" style={{ color: 'var(--foreground)' }}>{PROFILE.name}</h2>
+          <h2 className="text-lg font-bold" style={{ color: 'var(--foreground)' }}>{profile.name}</h2>
+          {profile.org && (
+            <p className="text-xs" style={{ color: 'var(--muted)' }}>{profile.org}</p>
+          )}
           <p className="text-sm font-semibold tracking-wider uppercase" style={{ color: 'var(--muted)' }}>
             Extra Working Hours
           </p>
@@ -143,9 +171,11 @@ export default function ExtraHoursReportPage() {
           </tbody>
         </table>
 
-        <p className="mt-3 text-sm font-semibold" style={{ color: 'var(--foreground)' }}>
-          Total Extra Hours: <span className="tabular-nums">{formatDuration(summary.totalMinutes)}</span>
-        </p>
+        {!blank && (
+          <p className="mt-3 text-sm font-semibold" style={{ color: 'var(--foreground)' }}>
+            Total Extra Hours: <span className="tabular-nums">{formatDuration(summary.totalMinutes)}</span>
+          </p>
+        )}
 
         {includeSignatures && (
           <div className="orbit-print-signatures mt-8 space-y-6 text-sm" style={{ color: 'var(--foreground)' }}>

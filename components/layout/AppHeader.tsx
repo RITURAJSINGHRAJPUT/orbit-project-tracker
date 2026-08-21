@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { Bell } from 'lucide-react';
 import { OrbitLogo } from '@/components/brand/OrbitLogo';
 import { Avatar } from '@/components/brand/Avatar';
-import { PROFILE } from '@/lib/profile';
+import { useProfile } from '@/lib/profile';
 
 interface AppHeaderProps {
   title: string;
@@ -16,6 +16,8 @@ interface AppHeaderProps {
  * notifications and profile on the trailing edge.
  */
 export function AppHeader({ title, subtitle }: AppHeaderProps) {
+  const profile = useProfile();
+
   return (
     <div
       className="flex items-center gap-3 rounded-2xl px-3 py-2"
@@ -50,7 +52,7 @@ export function AppHeader({ title, subtitle }: AppHeaderProps) {
 
       <Link
         href="/settings"
-        aria-label={`Profile — ${PROFILE.name}`}
+        aria-label={`Profile — ${profile.name}`}
         className="flex h-11 w-11 flex-shrink-0 items-center justify-center"
       >
         <Avatar size={36} />
