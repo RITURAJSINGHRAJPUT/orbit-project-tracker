@@ -99,5 +99,12 @@ export const weekdayOf = (date: string): string => {
   return format(new Date(y, m - 1, d), 'EEEE');
 };
 
+/** 'YYYY-MM-DD' → 'DD-MM-YYYY', for display outside date inputs. */
+export const formatDateDMY = (date: string): string => {
+  const [y, m, d] = date.split('-');
+  if (!y || !m || !d) return date;
+  return `${d}-${m}-${y}`;
+};
+
 /** True when 'YYYY-MM-DD' falls inside 'YYYY-MM'. */
 export const isInMonth = (date: string, month: string): boolean => date.startsWith(month);

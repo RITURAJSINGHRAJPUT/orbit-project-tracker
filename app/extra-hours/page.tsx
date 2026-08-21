@@ -14,7 +14,7 @@ import {
   ENTRY_STATUS_LABELS,
   ENTRY_STATUS_COLORS,
 } from '@/lib/types';
-import { formatDuration, formatMonth, parseMonth, toMonthKey, weekdayOf } from '@/lib/time';
+import { formatDateDMY, formatDuration, formatMonth, parseMonth, toMonthKey, weekdayOf } from '@/lib/time';
 import { useProfile } from '@/lib/profile';
 import { cn } from '@/lib/utils';
 
@@ -177,7 +177,7 @@ export default function ExtraHoursPage() {
                       className="cursor-pointer border-t"
                       style={{ borderColor: 'var(--border)' }}
                     >
-                      <td className="px-3 py-2.5 tabular-nums" style={{ color: 'var(--foreground)' }}>{e.date}</td>
+                      <td className="px-3 py-2.5 tabular-nums" style={{ color: 'var(--foreground)' }}>{formatDateDMY(e.date)}</td>
                       <td className="px-3 py-2.5" style={{ color: 'var(--muted)' }}>{weekdayOf(e.date)}</td>
                       <td className="px-3 py-2.5" style={{ color: 'var(--muted)' }}>{projectName(e.projectId)}</td>
                       <td className="px-3 py-2.5" style={{ color: 'var(--muted)' }}>{WORK_TYPE_LABELS[e.workType]}</td>
@@ -211,7 +211,7 @@ export default function ExtraHoursPage() {
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <p className="font-semibold text-sm" style={{ color: 'var(--foreground)' }}>
-                        {e.date} · <span style={{ color: 'var(--muted)' }}>{weekdayOf(e.date)}</span>
+                        {formatDateDMY(e.date)} · <span style={{ color: 'var(--muted)' }}>{weekdayOf(e.date)}</span>
                       </p>
                       <p className="text-xs mt-0.5 truncate" style={{ color: 'var(--muted)' }}>
                         {projectName(e.projectId)} · {WORK_TYPE_LABELS[e.workType]}

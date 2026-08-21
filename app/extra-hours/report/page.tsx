@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { ArrowLeft, Printer } from 'lucide-react';
 import { useTimeEntryStore } from '@/lib/store/useTimeEntryStore';
 import { useProjectStore } from '@/lib/store/useProjectStore';
-import { formatDuration, formatMonth, monthDays, toMonthKey, weekdayOf } from '@/lib/time';
+import { formatDateDMY, formatDuration, formatMonth, monthDays, toMonthKey, weekdayOf } from '@/lib/time';
 import { useProfile } from '@/lib/profile';
 
 /**
@@ -152,7 +152,7 @@ export default function ExtraHoursReportPage() {
           <tbody>
             {rows.map(({ date, weekday, entry }) => (
               <tr key={date}>
-                <td className="tabular-nums">{date}</td>
+                <td className="tabular-nums">{formatDateDMY(date)}</td>
                 <td>{weekday}</td>
                 <td>{entry ? projectName(entry.projectId) : ''}</td>
                 <td className="tabular-nums">{entry?.startTime ?? ''}</td>
