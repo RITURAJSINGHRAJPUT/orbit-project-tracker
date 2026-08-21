@@ -1,5 +1,5 @@
 export const PROFILE = {
-  name: 'Utsav',
+  name: 'Rituraj Singh',
   org: 'Bookends Hospitality',
 } as const;
 
